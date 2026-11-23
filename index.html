@@ -1,11 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Friends 2027</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Let's Be Social 2027</title>
+<style>
+  :root {
+    --bg:#f6f5f2; --card:#ffffff; --text:#1f2328; --muted:#6b7280; --line:#e5e3dd;
+    --accent:#2a9d8f; --away:#c0392b; --town:#3498db; --keen:#27ae60;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16181a; --card:#202326; --text:#eceff1; --muted:#9aa3ab; --line:#33383d; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         background:var(--bg); color:var(--text); line-height:1.4; }
+  .hidden { display:none !important; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px; }
+  h1 { font-size:1.3rem; margin:0; }
+  h2 { font-size:1.05rem; margin:0 0 10px; }
+  button, input, select { font: inherit; color: inherit; }
+  input, select { width:100%; padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); }
+  label { display:block; font-size:.8rem; color:var(--muted); margin:10px 0 4px; }
+  .btn { background:var(--accent); color:#fff; border:0; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:600; }
+  .btn:disabled { opacity:.6; cursor:default; }
+  .btn.ghost { background:transparent; color:var(--muted); border:1px solid var(--line); font-weight:500; padding:6px 10px; }
+  .btn.small { padding:4px 8px; font-size:.8rem; }
+  .error { color: var(--away); font-size:.9rem; min-height:1.2em; margin-top:8px; }
+
+  /* Login */
+  #login { max-width:360px; margin: 18vh auto 0; text-align:center; }
+  #login input { text-align:center; font-size:1.4rem; letter-spacing:.3em; margin:14px 0; }
+
+  /* Header */
+  .topbar { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px; }
+  .me { display:flex; align-items:center; gap:8px; font-size:.9rem; color:var(--muted); }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; flex:none; }
+
+  /* Calendar */
+  .monthbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .monthbar .btn { padding:6px 14px; }
+  .grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:4px; }
+  .dow { text-align:center; font-size:.7rem; color:var(--muted); padding-bottom:2px; }
+  .day { min-height:58px; padding:4px; border:1px solid var(--line); border-radius:8px; background:var(--bg);
+         text-align:left; cursor:pointer; display:flex; flex-direction:column; gap:2px; }
+  .day.empty { visibility:hidden; }
+  .day.weekend { background: color-mix(in srgb, var(--accent) 8%, var(--bg)); }
+  .day.today { border-color: var(--accent); }
+  .day.selected { outline:2px solid var(--accent); }
+  .day .n { font-size:.8rem; font-weight:600; }
+  .day .counts { display:flex; flex-wrap:wrap; gap:1px 4px; font-size:.65rem; }
+  .legend { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.8rem; color:var(--muted); margin-top:10px; }
+
+  /* Chips and lists */
+  .chip { display:inline-flex; align-items:center; gap:5px; background:var(--bg); border:1px solid var(--line);
+          border-radius:99px; padding:2px 9px 2px 7px; font-size:.82rem; margin:2px 4px 2px 0; }
+  .group { margin-bottom:12px; }
+  .group h3 { font-size:.85rem; margin:0 0 4px; }
+  .entry { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 0; border-top:1px solid var(--line); font-size:.9rem; }
+  .entry:first-of-type { border-top:0; }
+  .entry .meta { color:var(--muted); font-size:.8rem; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .weekend-row { display:block; width:100%; text-align:left; background:none; border:0; border-top:1px solid var(--line);
+                 padding:10px 0; cursor:pointer; }
+  .weekend-row:first-of-type { border-top:0; }
+  .weekend-row .when { font-weight:600; font-size:.9rem; }
+  .muted { color:var(--muted); font-size:.85rem; }
+</style>
 </head>
 <body>
-  <h1>Friends 2027 is coming soon</h1>
-</body>
-</html>
+
+<!-- LOGIN -->
+<div id="login" class="card hidden">
+  <h1>Let's Be Social 2027</h1>
+  <p class="muted">Enter your personal PIN</p>
+  <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
+  <button id="loginBtn" class="btn" style="width:100%">Let me in</button>
+  <div id="loginError" class="error"></div>
+</div>
+
+<!-- LOADING -->
+<div id="loading" class="wrap"><p class="muted" style="text-align:center;margin-top:30vh">Loading…</p></div>
+
+<!-- APP -->
+<div id="app" class="wrap hidden">
+  <div class="topbar">
+    <h1>Let's Be Social 2027</h1>
+    <div class="me"><span class="dot" id="meDot"></span><span id="meName"></span>
+      <button id="logoutBtn" class="btn ghost">Log out</button></div>
+  </div>
+
+  <div class="card">
+    <div class="monthbar">
+      <button id="prevBtn" class="btn">‹</button>
+      <h2 id="monthTitle" style="margin:0"></h2>
+      <button id="nextBtn" class="btn">›</button>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="legend">
+      <span>✈️ Away</span><span>🏠 In town</span><span>🎉 Free &amp; keen</span>
+      <span>(numbers = how many friends)</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 id="dayTitle"></h2>
+    <div id="dayBody"></div>
+  </div>
+
+  <div class="card">
+    <h2>Add my availability</h2>
+    <label for="fStatus">Status</label>
+    <select id="fStatus">
+      <option value="away">✈️ Away / Traveling</option>
+      <option value="in_town">🏠 In town / Available</option>
+      <option value="keen">🎉 Free &amp; keen to hang out</option>
+    </select>
+    <div class="row2">
+      <div><label for="fStart">From</label><input id="fStart" type="date" min="2027-01-01" max="2027-12-31"></div>
+      <div><label for="fEnd">To (optional)</label><input id="fEnd" type="date" min="2027-01-01" max="2027-12-31"></div>
+    </div>
+    <label for="fNote">Note (optional)</label>
+    <input id="fNote" type="text" maxlength="200" placeholder="e.g. Portugal with family">
+    <div style="margin-top:12px"><button id="addBtn" class="btn">Save</button></div>
+    <div id="formError" class="error"></div>
+  </div>
+
+  <div class="card">
+    <h2>Upcoming weekends</h2>
+    <div id="weekends"></div>
+  </div>
+</div>
+
+<script>
+// ====== SETTINGS ======
+const API_URL = 'https://script.google.com/macros/s/AKfycbw94VJQp_gXpADIyab3i_YPGlr9p-Dyj5_uHa_7ZAqJFr9dWRFbVMjrP-Do5Fziv0eV/exec';
+const YEAR = 2027;
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const STATUS = {
+  away:    { label: 'Away / Traveling',         icon: '✈️' },
+  in_town: { label: 'In town / Available',      icon: '🏠' },
+  keen:    { label: 'Free & keen to hang
