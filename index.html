@@ -89,11 +89,11 @@
   .day .counts { display:flex; flex-wrap:wrap; gap:2px; }
   .pill { font-size:.62rem; font-weight:700; color:#fff; border-radius:6px; padding:0 4px; min-width:15px; text-align:center; line-height:1.4; }
   .pill.away { background:var(--away); } .pill.in_town { background:var(--town); }
-  .pill.keen { background:var(--keen); } .pill.ev { background:var(--accent); color:var(--on-accent); }
+  .pill.keen { background:var(--keen); } .pill.evt { background:var(--accent); color:var(--on-accent); }
   .legend { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.78rem; color:var(--muted); margin-top:12px; }
   .legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
   .sw.away { background:var(--away); } .sw.in_town { background:var(--town); }
-  .sw.keen { background:var(--keen); } .sw.ev { background:var(--accent); }
+  .sw.keen { background:var(--keen); } .sw.evt { background:var(--accent); }
 
   /* Chips and lists */
   .chip { display:inline-flex; align-items:center; gap:5px; background:var(--bg); border:1px solid var(--line);
@@ -196,7 +196,7 @@
       <div class="grid" id="grid"></div>
       <div class="legend">
         <span><i class="sw away"></i>Away</span><span><i class="sw in_town"></i>In town</span>
-        <span><i class="sw keen"></i>Free &amp; keen</span><span><i class="sw ev"></i>Event</span>
+        <span><i class="sw keen"></i>Free &amp; keen</span><span><i class="sw evt"></i>Event</span>
       </div>
     </div>
 
@@ -482,7 +482,7 @@ function renderMonth() {
       if (n) counts += '<span class="pill ' + k + '">' + n + '</span>';
     });
     const evN = eventsOn(ds).length;
-    if (evN) counts += '<span class="pill ev">' + evN + '</span>';
+    if (evN) counts += '<span class="pill evt">' + evN + '</span>';
     html += '<button class="day' + (col >= 5 ? ' weekend' : '') + (ds === tStr ? ' today' : '') +
             (ds === selected ? ' selected' : '') + '" data-date="' + ds + '">' +
             '<span class="n">' + d + '</span><span class="counts">' + counts + '</span></button>';
