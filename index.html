@@ -68,6 +68,7 @@
   .me { display:flex; align-items:center; gap:6px; font-size:.85rem; flex-wrap:wrap; }
   .me .dot { border:2px solid #fff; width:14px; height:14px; }
   .pillbtn { background:rgba(255,255,255,.2); color:#fff; border:0; border-radius:99px; padding:6px 12px; cursor:pointer; font-size:.8rem; }
+  .pillbtn.on { background:#fff; color:#b84a0a; font-weight:700; }
   .pillbtn:disabled { opacity:.6; }
   .spin { animation: spin 1s linear infinite; display:inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -157,6 +158,20 @@
              display:flex; flex-direction:column; align-items:center; gap:1px; font-size:.72rem; font-weight:600; }
   .tab-btn .ti { font-size:1.3rem; line-height:1.2; }
   .tab-btn.active { color:var(--accent); background:var(--accent-soft); }
+
+  /* Email preferences pop-up */
+  .modal { position:fixed; inset:0; z-index:40; background:rgba(30,15,5,.55); display:flex; align-items:center; justify-content:center; padding:16px; }
+  .modal-card { background:var(--card); border-radius:20px; padding:18px; width:100%; max-width:440px; max-height:90vh; overflow:auto; box-shadow:0 20px 50px rgba(0,0,0,.35); }
+  .opt { display:flex; gap:10px; align-items:flex-start; padding:12px; margin:8px 0 0; border:1.5px solid var(--line);
+         border-radius:14px; cursor:pointer; font-size:.95rem; font-weight:400; color:var(--text); }
+  .opt:has(input:checked) { border-color:var(--accent); background:var(--accent-soft); }
+  .opt input[type=radio] { width:18px; height:18px; padding:0; margin:2px 0 0; flex:none; border:0; background:transparent;
+         box-shadow:none; accent-color:var(--accent); }
+  .opt small { display:block; color:var(--muted); font-size:.78rem; margin-top:2px; }
+  .statusbox { margin:12px 0 0; padding:9px 12px; border-radius:12px; background:var(--bg); font-size:.85rem; }
+  .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(96px + env(safe-area-inset-bottom));
+           background:#2b2018; color:#fff; padding:10px 16px; border-radius:99px; font-size:.88rem; z-index:50;
+           box-shadow:0 8px 24px rgba(0,0,0,.3); max-width:90vw; text-align:center; }
 </style>
 </head>
 <body>
@@ -182,6 +197,7 @@
       <div><div class="kicker">2027</div><h1>Let's Be Social</h1></div>
       <div class="me">
         <span class="dot" id="meDot"></span><b id="meName"></b>
+        <button id="prefsBtn" class="pillbtn">🔔 Get emails</button>
         <button id="refreshBtn" class="pillbtn" title="Refresh">↻</button>
         <button id="logoutBtn" class="pillbtn">Log out</button>
       </div>
@@ -296,7 +312,38 @@
     <button class="tab-btn" data-tab="events"><span class="ti">📌</span><span>Events</span></button>
     <button class="tab-btn" data-tab="ideas"><span class="ti">💡</span><span>Ideas</span></button>
   </div></nav>
+
+  <!-- EMAIL PREFERENCES POP-UP -->
+  <div id="prefsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="prefsTitle">
+    <div class="modal-card">
+      <div class="sechead" style="margin-top:0">
+        <h2 id="prefsTitle">🔔 Email updates</h2>
+        <button id="prefsClose" class="btn ghost small" aria-label="Close">✕</button>
+      </div>
+      <p class="muted" style="margin:0 0 4px">Get a short summary of new events, ideas, replies and availability. You only get an email when something new has happened, and never about things you did yourself.</p>
+
+      <label for="prefEmail">Your email</label>
+      <input id="prefEmail" type="email" inputmode="email" autocomplete="email" maxlength="120" placeholder="you@example.com">
+
+      <label style="margin-top:14px">How often?</label>
+      <label class="opt"><input type="radio" name="prefFreq" value="daily">
+        <span><b>Daily summary</b><small>A morning email covering the day before (only if there was activity)</small></span></label>
+      <label class="opt"><input type="radio" name="prefFreq" value="weekly">
+        <span><b>Weekly summary</b><small>One email a week rounding up everything new</small></span></label>
+      <label class="opt hidden" id="optEvery2"><input type="radio" name="prefFreq" value="every2days">
+        <span><b>Every other day</b><small>Your current setting</small></span></label>
+
+      <div id="prefStatus" class="statusbox"></div>
+      <div id="prefError" class="error"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <button id="prefSave" class="btn">Save</button>
+        <button id="prefOff" class="btn ghost hidden">Turn off emails</button>
+      </div>
+    </div>
+  </div>
 </div>
+
+<div id="toast" class="toast hidden"></div>
 
 <script>
 // ====== SETTINGS ======
@@ -319,10 +366,12 @@ const RSVP = {
 };
 const TABS = ['calendar', 'events', 'ideas'];
 const DATE_PAIRS = { fStart: 'fEnd', eDate: 'eEnd', pDate: 'pEnd' }; // start input -> end input
+const FREQ_LABEL = { daily: 'a daily summary', weekly: 'a weekly summary', every2days: 'a summary every other day' };
 
 // ====== STATE ======
 let pin = localStorage.getItem('f27_pin') || '';
 let me = null, data = null, month = 0, selected = null, editingId = null, promotingId = null, tab = null;
+let prefs = null; // this person's own email settings (never part of the shared data)
 const drafts = {}; // unsent comment text, keyed by idea id
 
 // ====== SMALL HELPERS ======
@@ -347,6 +396,14 @@ async function api(action, payload) {
   const j = await res.json();
   if (!j.ok) throw new Error(j.error || 'Something went wrong');
   return j;
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg; t.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.classList.add('hidden'); }, 3200);
 }
 
 // ====== TABS, FORMS, DATE PAIRS ======
@@ -400,9 +457,10 @@ async function start() {
 }
 
 function enterApp(j) {
-  me = j.user; data = j.data;
+  me = j.user; data = j.data; prefs = null;
   $('meName').textContent = me.name;
   $('meDot').style.background = colorOf(me.color);
+  updatePrefsBtn();
   const now = new Date();
   if (now.getFullYear() === YEAR) { month = now.getMonth(); selected = ymd(YEAR, month, now.getDate()); }
   else { month = 0; selected = YEAR + '-01-01'; }
@@ -412,6 +470,7 @@ function enterApp(j) {
   show('app');
   setTab(localStorage.getItem('f27_tab') || 'calendar');
   renderAll();
+  loadPrefs(); // in the background; the 🔔 button updates when it arrives
 }
 
 $('loginBtn').onclick = async function () {
@@ -431,13 +490,89 @@ $('loginBtn').onclick = async function () {
   $('loginBtn').disabled = false;
 };
 $('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
-$('logoutBtn').onclick = function () { localStorage.removeItem('f27_pin'); pin = ''; me = null; data = null; show('login'); };
+$('logoutBtn').onclick = function () {
+  localStorage.removeItem('f27_pin'); pin = ''; me = null; data = null; prefs = null;
+  closePrefs(); show('login');
+};
 
 $('refreshBtn').onclick = async function () {
   const b = this; b.disabled = true; b.innerHTML = '<span class="spin">↻</span>';
   try { const j = await api('getAll'); data = j.data; renderAll(); }
   catch (err) { alert(err.message); }
   b.disabled = false; b.textContent = '↻';
+};
+
+// ====== EMAIL PREFERENCES ======
+function isOn() { return !!prefs && prefs.digest !== 'off'; }
+
+function updatePrefsBtn() {
+  const b = $('prefsBtn');
+  b.textContent = isOn() ? '🔔 Emails on' : '🔔 Get emails';
+  b.classList.toggle('on', isOn());
+}
+
+async function loadPrefs() {
+  try { const j = await api('getPrefs'); prefs = j.prefs; updatePrefsBtn(); }
+  catch (err) { /* button just stays on "Get emails" */ }
+}
+
+function fillPrefsForm() {
+  const p = prefs || { email: '', digest: 'off' };
+  $('prefEmail').value = p.email || '';
+  $('optEvery2').classList.toggle('hidden', p.digest !== 'every2days');
+  const chosen = (p.digest === 'daily' || p.digest === 'weekly' || p.digest === 'every2days') ? p.digest : 'daily';
+  document.querySelectorAll('input[name=prefFreq]').forEach(r => { r.checked = r.value === chosen; });
+  $('prefOff').classList.toggle('hidden', !isOn());
+  $('prefSave').textContent = isOn() ? 'Save changes' : 'Sign me up';
+  $('prefStatus').innerHTML = isOn()
+    ? '✅ You\u2019re getting ' + esc(FREQ_LABEL[p.digest] || 'email updates') + ' at <b>' + esc(p.email) + '</b>.'
+    : '📭 You\u2019re not getting emails at the moment.';
+  $('prefError').textContent = '';
+}
+
+async function openPrefs() {
+  $('prefsModal').classList.remove('hidden');
+  fillPrefsForm();
+  if (!prefs) { await loadPrefs(); fillPrefsForm(); }
+  if (!isOn()) $('prefEmail').focus();
+}
+function closePrefs() { $('prefsModal').classList.add('hidden'); }
+
+$('prefsBtn').onclick = openPrefs;
+$('prefsClose').onclick = closePrefs;
+$('prefsModal').addEventListener('click', function (e) { if (e.target === this) closePrefs(); });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closePrefs(); });
+
+$('prefSave').onclick = async function () {
+  const email = $('prefEmail').value.trim();
+  const sel = document.querySelector('input[name=prefFreq]:checked');
+  const digest = sel ? sel.value : 'daily';
+  $('prefError').textContent = '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { $('prefError').textContent = 'Please enter a valid email address.'; return; }
+  const b = this, wasOn = isOn();
+  b.disabled = true; b.textContent = 'Saving…';
+  try {
+    const j = await api('setPrefs', { email: email, digest: digest });
+    prefs = j.prefs; updatePrefsBtn(); closePrefs();
+    toast(wasOn ? '✅ Email settings updated' : '✅ You\u2019re signed up for emails');
+  } catch (err) {
+    $('prefError').textContent = err.message;
+    b.textContent = wasOn ? 'Save changes' : 'Sign me up';
+  }
+  b.disabled = false;
+};
+
+$('prefOff').onclick = async function () {
+  const b = this;
+  b.disabled = true;
+  try {
+    const j = await api('setPrefs', { email: '', digest: 'off' });
+    prefs = j.prefs; updatePrefsBtn(); closePrefs();
+    toast('Emails turned off. Your address has been removed.');
+  } catch (err) {
+    $('prefError').textContent = err.message;
+  }
+  b.disabled = false;
 };
 
 // ====== LOOKUPS ======
