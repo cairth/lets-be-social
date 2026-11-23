@@ -141,4 +141,214 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 const STATUS = {
   away:    { label: 'Away / Traveling',         icon: '✈️' },
   in_town: { label: 'In town / Available',      icon: '🏠' },
-  keen:    { label: 'Free & keen to hang
+  keen:    { label: 'Free & keen to hang out',  icon: '🎉' }
+};
+
+// ====== STATE ======
+let pin = localStorage.getItem('f27_pin') || '';
+let me = null, data = null, month = 0, selected = null;
+
+// ====== SMALL HELPERS ======
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const ymd = (y, m, d) => y + '-' + pad(m + 1) + '-' + pad(d);
+const parse = ds => { const p = ds.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+const fmt = (ds, opts) => parse(ds).toLocaleDateString('en-GB', opts);
+const colorOf = c => /^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#888888';
+const userById = id => data.users.find(u => u.id === id) || { name: 'Someone', color: '#888888' };
+const chip = u => '<span class="chip"><span class="dot" style="background:' + colorOf(u.color) + '"></span>' + esc(u.name) + '</span>';
+
+async function api(action, payload) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ action: action, pin: pin }, payload || {}))
+  });
+  const j = await res.json();
+  if (!j.ok) throw new Error(j.error || 'Something went wrong');
+  return j;
+}
+
+// ====== LOGIN / STARTUP ======
+function show(which) {
+  ['login', 'loading', 'app'].forEach(id => $(id).classList.toggle('hidden', id !== which));
+}
+
+async function start() {
+  if (!pin) { show('login'); return; }
+  show('loading');
+  try {
+    const j = await api('getAll');
+    enterApp(j);
+  } catch (err) {
+    if (err.message === 'Wrong PIN') { localStorage.removeItem('f27_pin'); pin = ''; }
+    show('login');
+    $('loginError').textContent = err.message === 'Wrong PIN' ? '' : 'Could not load: ' + err.message;
+  }
+}
+
+function enterApp(j) {
+  me = j.user; data = j.data;
+  $('meName').textContent = me.name;
+  $('meDot').style.background = colorOf(me.color);
+  const now = new Date();
+  if (now.getFullYear() === YEAR) { month = now.getMonth(); selected = ymd(YEAR, month, now.getDate()); }
+  else { month = 0; selected = YEAR + '-01-01'; }
+  $('fStart').value = selected;
+  show('app');
+  renderAll();
+}
+
+$('loginBtn').onclick = async function () {
+  const p = $('pinInput').value.trim();
+  if (!p) return;
+  $('loginBtn').disabled = true; $('loginError').textContent = '';
+  pin = p;
+  try {
+    const j = await api('getAll');
+    localStorage.setItem('f27_pin', p);
+    $('pinInput').value = '';
+    enterApp(j);
+  } catch (err) {
+    pin = '';
+    $('loginError').textContent = err.message;
+  }
+  $('loginBtn').disabled = false;
+};
+$('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
+$('logoutBtn').onclick = function () { localStorage.removeItem('f27_pin'); pin = ''; me = null; data = null; show('login'); };
+
+// ====== AVAILABILITY LOOKUPS ======
+function entriesOn(ds) {
+  return data.availability.filter(a => a.startDate <= ds && a.endDate >= ds);
+}
+function uniqueUsers(entries) {
+  const seen = {}; const out = [];
+  entries.forEach(e => { if (!seen[e.userId]) { seen[e.userId] = 1; out.push(e.userId); } });
+  return out;
+}
+
+// ====== RENDERING ======
+function renderAll() { renderMonth(); renderDay(); renderWeekends(); }
+
+function renderMonth() {
+  $('monthTitle').textContent = MONTHS[month] + ' ' + YEAR;
+  $('prevBtn').disabled = month === 0;
+  $('nextBtn').disabled = month === 11;
+  const first = new Date(YEAR, month, 1);
+  const offset = (first.getDay() + 6) % 7; // Monday first
+  const daysIn = new Date(YEAR, month + 1, 0).getDate();
+  const todayStr = (() => { const t = new Date(); return ymd(t.getFullYear(), t.getMonth(), t.getDate()); })();
+  let html = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => '<div class="dow">' + d + '</div>').join('');
+  for (let i = 0; i < offset; i++) html += '<div class="day empty"></div>';
+  for (let d = 1; d <= daysIn; d++) {
+    const ds = ymd(YEAR, month, d);
+    const col = (offset + d - 1) % 7;
+    const es = entriesOn(ds);
+    let counts = '';
+    Object.keys(STATUS).forEach(k => {
+      const n = uniqueUsers(es.filter(e => e.status === k)).length;
+      if (n) counts += '<span>' + STATUS[k].icon + n + '</span>';
+    });
+    html += '<button class="day' + (col >= 5 ? ' weekend' : '') + (ds === todayStr ? ' today' : '') +
+            (ds === selected ? ' selected' : '') + '" data-date="' + ds + '">' +
+            '<span class="n">' + d + '</span><span class="counts">' + counts + '</span></button>';
+  }
+  $('grid').innerHTML = html;
+}
+
+function renderDay() {
+  $('dayTitle').textContent = fmt(selected, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const es = entriesOn(selected);
+  if (!es.length) { $('dayBody').innerHTML = '<p class="muted">Nobody has said anything about this day yet.</p>'; return; }
+  let html = '';
+  Object.keys(STATUS).forEach(k => {
+    const list = es.filter(e => e.status === k);
+    if (!list.length) return;
+    html += '<div class="group"><h3>' + STATUS[k].icon + ' ' + STATUS[k].label + '</h3>';
+    list.forEach(e => {
+      const u = userById(e.userId);
+      const range = e.startDate === e.endDate ? fmt(e.startDate, { day: 'numeric', month: 'short' })
+        : fmt(e.startDate, { day: 'numeric', month: 'short' }) + ' – ' + fmt(e.endDate, { day: 'numeric', month: 'short' });
+      html += '<div class="entry"><div>' + chip(u) + '<div class="meta">' + esc(range) + (e.note ? ' · ' + esc(e.note) : '') + '</div></div>' +
+              (e.userId === me.id ? '<button class="btn ghost small" data-del="' + esc(e.id) + '">Delete</button>' : '') + '</div>';
+    });
+    html += '</div>';
+  });
+  $('dayBody').innerHTML = html;
+}
+
+function renderWeekends() {
+  const today = new Date();
+  let d = new Date(Math.max(today.getTime(), new Date(YEAR, 0, 1).getTime()));
+  d = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  while (d.getDay() !== 6) d.setDate(d.getDate() + 1); // next Saturday
+  let html = '', shown = 0;
+  while (d.getFullYear() === YEAR && shown < 8) {
+    const sat = ymd(d.getFullYear(), d.getMonth(), d.getDate());
+    const sunD = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+    const sun = ymd(sunD.getFullYear(), sunD.getMonth(), sunD.getDate());
+    const es = entriesOn(sat).concat(entriesOn(sun));
+    let body = '';
+    Object.keys(STATUS).forEach(k => {
+      const ids = uniqueUsers(es.filter(e => e.status === k));
+      if (ids.length) body += '<div>' + STATUS[k].icon + ' ' + ids.map(id => chip(userById(id))).join('') + '</div>';
+    });
+    if (!body) body = '<div class="muted">No info yet</div>';
+    html += '<button class="weekend-row" data-date="' + sat + '"><div class="when">' +
+            esc(fmt(sat, { day: 'numeric', month: 'short' }) + ' – ' + fmt(sun, { day: 'numeric', month: 'short' })) +
+            '</div>' + body + '</button>';
+    shown++;
+    d.setDate(d.getDate() + 7);
+  }
+  $('weekends').innerHTML = html || '<p class="muted">No more weekends in 2027!</p>';
+}
+
+// ====== INTERACTIONS ======
+function selectDate(ds) {
+  selected = ds;
+  month = parse(ds).getMonth();
+  $('fStart').value = ds;
+  renderAll();
+}
+
+$('prevBtn').onclick = function () { if (month > 0) { month--; renderMonth(); } };
+$('nextBtn').onclick = function () { if (month < 11) { month++; renderMonth(); } };
+
+document.addEventListener('click', async function (e) {
+  const dayBtn = e.target.closest('[data-date]');
+  if (dayBtn) { selectDate(dayBtn.getAttribute('data-date')); if (dayBtn.classList.contains('weekend-row')) window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  const delBtn = e.target.closest('[data-del]');
+  if (delBtn) {
+    if (!confirm('Delete this entry?')) return;
+    delBtn.disabled = true;
+    try { const j = await api('deleteAvailability', { id: delBtn.getAttribute('data-del') }); data = j.data; renderAll(); }
+    catch (err) { alert(err.message); delBtn.disabled = false; }
+  }
+});
+
+$('addBtn').onclick = async function () {
+  const start = $('fStart').value, end = $('fEnd').value;
+  $('formError').textContent = '';
+  if (!start) { $('formError').textContent = 'Pick a start date.'; return; }
+  if (end && end < start) { $('formError').textContent = 'The end date is before the start date.'; return; }
+  $('addBtn').disabled = true; $('addBtn').textContent = 'Saving…';
+  try {
+    const j = await api('addAvailability', {
+      status: $('fStatus').value, startDate: start, endDate: end || start, note: $('fNote').value
+    });
+    data = j.data;
+    $('fNote').value = ''; $('fEnd').value = '';
+    selected = start; month = parse(start).getMonth();
+    renderAll();
+  } catch (err) {
+    $('formError').textContent = err.message;
+  }
+  $('addBtn').disabled = false; $('addBtn').textContent = 'Save';
+};
+
+start();
+</script>
+</body>
+</html>
