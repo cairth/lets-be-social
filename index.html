@@ -2,113 +2,164 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Let's Be Social 2027</title>
 <style>
   :root {
-    --bg:#f6f5f2; --card:#ffffff; --text:#1f2328; --muted:#6b7280; --line:#e5e3dd;
-    --accent:#2a9d8f; --away:#c0392b; --town:#3498db; --keen:#27ae60; --maybe:#e0a100;
+    --bg:#fbf6f0; --card:#ffffff; --text:#2b2018; --muted:#7a6a5c; --line:#eadfd2;
+    --accent:#c2570c; --accent-soft:#fdeadb; --on-accent:#ffffff;
+    --away:#6c5ce7; --town:#1b9aaa; --keen:#2f9e44; --maybe:#e0a100; --danger:#c92a2a;
+    --shadow: 0 1px 2px rgba(80,40,10,.06), 0 6px 18px rgba(80,40,10,.06);
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg:#16181a; --card:#202326; --text:#eceff1; --muted:#9aa3ab; --line:#33383d; }
+    :root {
+      --bg:#1a1511; --card:#262019; --text:#f4ece4; --muted:#b2a395; --line:#3d342b;
+      --accent:#f08a3c; --accent-soft:#3a281a; --on-accent:#1b1109;
+      --away:#9b8cff; --town:#3cc0d0; --keen:#5cc06f; --maybe:#f0b429; --danger:#ff7b7b;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+    }
   }
   * { box-sizing: border-box; }
   body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-         background:var(--bg); color:var(--text); line-height:1.4; }
+         background:var(--bg); color:var(--text); line-height:1.4; padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
   .hidden { display:none !important; }
   .wrap { max-width: 760px; margin: 0 auto; padding: 12px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px; }
+  .card { background:var(--card); border-radius:18px; padding:16px; margin-bottom:14px; box-shadow:var(--shadow); }
   h1 { font-size:1.3rem; margin:0; }
-  h2 { font-size:1.05rem; margin:0 0 10px; }
+  h2 { font-size:1.05rem; margin:0; }
   button, input, select, textarea { font: inherit; color: inherit; }
-  input, select, textarea { width:100%; padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); }
-  textarea { resize: vertical; min-height:60px; }
-  label { display:block; font-size:.8rem; color:var(--muted); margin:10px 0 4px; }
-  .btn { background:var(--accent); color:#fff; border:0; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:600; }
+  input, select, textarea { width:100%; min-width:0; max-width:100%; padding:10px 12px; font-size:16px;
+         border:1.5px solid var(--line); border-radius:12px; background:var(--bg); }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  input[type=date] { -webkit-appearance:none; appearance:none; height:44px; display:block; text-align:left; }
+  input[type=date]::-webkit-date-and-time-value { text-align:left; }
+  textarea { resize: vertical; min-height:64px; }
+  label { display:block; font-size:.78rem; font-weight:600; color:var(--muted); margin:12px 0 4px; }
+  .btn { background:var(--accent); color:var(--on-accent); border:0; padding:10px 18px; border-radius:12px; cursor:pointer; font-weight:600; }
   .btn:disabled { opacity:.6; cursor:default; }
-  .btn.ghost { background:transparent; color:var(--muted); border:1px solid var(--line); font-weight:500; padding:6px 10px; }
-  .btn.small { padding:4px 8px; font-size:.8rem; }
-  .error { color: var(--away); font-size:.9rem; min-height:1.2em; margin-top:8px; }
-
-  /* Login */
-  #login { max-width:360px; margin: 18vh auto 0; text-align:center; }
-  #login input { text-align:center; font-size:1.4rem; letter-spacing:.3em; margin:14px 0; }
-
-  /* Header */
-  .topbar { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px; }
-  .me { display:flex; align-items:center; gap:8px; font-size:.9rem; color:var(--muted); }
+  .btn.ghost { background:transparent; color:var(--muted); border:1.5px solid var(--line); font-weight:500; padding:6px 10px; }
+  .btn.soft { background:var(--accent-soft); color:var(--accent); }
+  .btn.small { padding:6px 11px; font-size:.82rem; border-radius:10px; }
+  .error { color: var(--danger); font-size:.9rem; min-height:1.2em; margin-top:8px; }
+  .muted { color:var(--muted); font-size:.85rem; }
   .dot { display:inline-block; width:10px; height:10px; border-radius:50%; flex:none; }
 
+  /* Form rows: side by side on wide screens, stacked on phones */
+  .row2 { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0 12px; }
+  @media (max-width: 520px) { .row2 { grid-template-columns: 1fr; } }
+
+  /* Login */
+  #login { max-width:360px; margin: 16vh auto 0; text-align:center; padding:28px 22px; border-top:6px solid var(--accent); }
+  #login .big { font-size:2.4rem; }
+  #login h1 { color:var(--accent); margin-top:4px; }
+  #login input { text-align:center; font-size:1.4rem; letter-spacing:.3em; margin:14px 0; }
+
+  /* Hero banner */
+  .hero { background: linear-gradient(135deg, #b84a0a 0%, #e07a1f 60%, #f2a33c 100%); color:#fff;
+          border-radius:0 0 26px 26px; padding: calc(16px + env(safe-area-inset-top)) 16px 18px;
+          margin:-12px -12px 16px; box-shadow:0 10px 26px rgba(184,74,10,.28); }
+  .hero-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; }
+  .kicker { font-size:.72rem; letter-spacing:.2em; text-transform:uppercase; opacity:.85; font-weight:700; }
+  .hero h1 { font-size:1.55rem; color:#fff; }
+  .me { display:flex; align-items:center; gap:6px; font-size:.85rem; flex-wrap:wrap; }
+  .me .dot { border:2px solid #fff; width:14px; height:14px; }
+  .pillbtn { background:rgba(255,255,255,.2); color:#fff; border:0; border-radius:99px; padding:6px 12px; cursor:pointer; font-size:.8rem; }
+  .pillbtn:disabled { opacity:.6; }
+  .spin { animation: spin 1s linear infinite; display:inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .nextup { margin-top:12px; background:rgba(255,255,255,.18); border-radius:14px; padding:9px 12px; font-size:.88rem; }
+
+  /* Section headers */
+  .sechead { display:flex; justify-content:space-between; align-items:center; gap:10px; margin:4px 2px 10px; }
+  .sechead h2 { font-size:1.15rem; }
+
   /* Calendar */
-  .monthbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-  .monthbar .btn { padding:6px 14px; }
-  .grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:4px; }
-  .dow { text-align:center; font-size:.7rem; color:var(--muted); padding-bottom:2px; }
-  .day { min-height:58px; padding:4px; border:1px solid var(--line); border-radius:8px; background:var(--bg);
-         text-align:left; cursor:pointer; display:flex; flex-direction:column; gap:2px; }
+  .monthbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .monthbar h2 { color:var(--accent); font-size:1.15rem; }
+  .monthbar .btn { padding:6px 14px; font-size:1.1rem; }
+  .grid { display:grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap:4px; }
+  .dow { text-align:center; font-size:.7rem; font-weight:600; color:var(--muted); padding-bottom:2px; }
+  .day { min-height:54px; padding:4px; border:1.5px solid transparent; border-radius:10px; background:var(--bg);
+         text-align:left; cursor:pointer; display:flex; flex-direction:column; gap:3px; min-width:0; }
   .day.empty { visibility:hidden; }
-  .day.weekend { background: color-mix(in srgb, var(--accent) 8%, var(--bg)); }
-  .day.today { border-color: var(--accent); }
-  .day.selected { outline:2px solid var(--accent); }
-  .day .n { font-size:.8rem; font-weight:600; }
-  .day .counts { display:flex; flex-wrap:wrap; gap:1px 4px; font-size:.65rem; }
-  .legend { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.8rem; color:var(--muted); margin-top:10px; }
+  .day.weekend { background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+  .day.selected { border-color:var(--accent); background:var(--accent-soft); }
+  .day .n { font-size:.8rem; font-weight:600; align-self:flex-start; padding:0 5px; border-radius:99px; }
+  .day.today .n { background:var(--accent); color:var(--on-accent); }
+  .day .counts { display:flex; flex-wrap:wrap; gap:2px; }
+  .pill { font-size:.62rem; font-weight:700; color:#fff; border-radius:6px; padding:0 4px; min-width:15px; text-align:center; line-height:1.4; }
+  .pill.away { background:var(--away); } .pill.in_town { background:var(--town); }
+  .pill.keen { background:var(--keen); } .pill.ev { background:var(--accent); color:var(--on-accent); }
+  .legend { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.78rem; color:var(--muted); margin-top:12px; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+  .sw.away { background:var(--away); } .sw.in_town { background:var(--town); }
+  .sw.keen { background:var(--keen); } .sw.ev { background:var(--accent); }
 
   /* Chips and lists */
   .chip { display:inline-flex; align-items:center; gap:5px; background:var(--bg); border:1px solid var(--line);
-          border-radius:99px; padding:2px 9px 2px 7px; font-size:.82rem; margin:2px 4px 2px 0; }
+          border-radius:99px; padding:2px 10px 2px 7px; font-size:.82rem; margin:2px 4px 2px 0; }
   .group { margin-bottom:12px; }
   .group h3 { font-size:.85rem; margin:0 0 4px; }
+  .st-away { color:var(--away); } .st-in_town { color:var(--town); } .st-keen { color:var(--keen); }
   .entry { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 0; border-top:1px solid var(--line); font-size:.9rem; }
   .entry:first-of-type { border-top:0; }
   .entry .meta { color:var(--muted); font-size:.8rem; }
-  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .weekend-row { display:block; width:100%; text-align:left; background:none; border:0; border-top:1px solid var(--line);
                  padding:10px 0; cursor:pointer; }
   .weekend-row:first-of-type { border-top:0; }
-  .weekend-row .when { font-weight:600; font-size:.9rem; }
-  .muted { color:var(--muted); font-size:.85rem; }
+  .weekend-row .when { font-weight:700; font-size:.9rem; color:var(--accent); }
 
-  /* Events */
-  .ev { border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px; background:var(--bg); }
+  /* Events + ideas */
+  .ev { border:1px solid var(--line); border-left:5px solid var(--accent); border-radius:14px; padding:12px 12px 12px 14px; margin-bottom:10px; background:var(--bg); }
   .ev:last-child { margin-bottom:0; }
   .ev-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
   .ev-title { font-weight:700; font-size:1rem; }
-  .tag { display:inline-block; font-size:.7rem; background:var(--accent); color:#fff; border-radius:99px; padding:1px 8px; margin-left:6px; vertical-align:middle; }
+  .tag { display:inline-block; font-size:.7rem; font-weight:600; background:var(--accent); color:#fff; border-radius:99px; padding:1px 9px; margin-left:6px; vertical-align:middle; }
   .tag.alt { background:var(--muted); }
   .ev-meta { color:var(--muted); font-size:.82rem; margin-top:2px; }
   .ev-notes { font-size:.88rem; margin:8px 0 0; white-space:pre-wrap; }
   .rsvp { display:flex; gap:6px; margin:10px 0 6px; flex-wrap:wrap; }
-  .rsvp button { flex:1; min-width:84px; padding:7px 6px; border:1px solid var(--line); border-radius:10px;
+  .rsvp button { flex:1; min-width:84px; padding:8px 6px; border:1.5px solid var(--line); border-radius:12px;
                  background:var(--card); cursor:pointer; font-size:.85rem; }
   .rsvp button.on.going { background:var(--keen); color:#fff; border-color:var(--keen); }
   .rsvp button.on.maybe { background:var(--maybe); color:#fff; border-color:var(--maybe); }
-  .rsvp button.on.no { background:var(--away); color:#fff; border-color:var(--away); }
+  .rsvp button.on.no { background:var(--danger); color:#fff; border-color:var(--danger); }
   .attend { font-size:.82rem; }
   .attend .lbl { color:var(--muted); margin-right:4px; }
-  .ev-actions { display:flex; gap:6px; }
-  .subhead { font-size:.85rem; color:var(--muted); margin:14px 0 8px; font-weight:600; }
+  .ev-actions { display:flex; gap:6px; flex:none; }
+  .subhead { font-size:.85rem; color:var(--accent); margin:14px 0 8px; font-weight:700; }
 
-  /* Ideas */
-  .idea.done { opacity:.75; }
+  .idea { border-left-color:#f2a93b; }
+  .idea.done { opacity:.8; border-left-color:var(--keen); }
   .vote-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:10px 0 6px; }
-  .vote-btn { padding:7px 12px; border:1px solid var(--line); border-radius:10px; background:var(--card); cursor:pointer; font-size:.85rem; }
-  .vote-btn.on { background:var(--keen); color:#fff; border-color:var(--keen); }
+  .vote-btn { padding:8px 14px; border:1.5px solid var(--accent); color:var(--accent); border-radius:12px; background:transparent; cursor:pointer; font-size:.85rem; font-weight:600; }
+  .vote-btn.on { background:var(--accent); color:var(--on-accent); }
   .comments { margin-top:10px; border-top:1px solid var(--line); padding-top:8px; }
   .comment { font-size:.86rem; padding:4px 0; }
-  .comment .who { font-weight:600; margin-right:4px; }
+  .comment .who { font-weight:700; margin-right:5px; }
   .comment .when { color:var(--muted); font-size:.74rem; margin-left:6px; }
   .comment-form { display:flex; gap:6px; margin-top:8px; }
-  .comment-form input { flex:1; padding:8px 10px; }
-  .comment-form .btn { padding:8px 12px; }
-  .promote-box { margin-top:10px; padding:10px; border:1px dashed var(--accent); border-radius:10px; background:var(--card); }
-  .promote-box h4 { margin:0 0 4px; font-size:.9rem; }
+  .comment-form input { flex:1; padding:8px 12px; }
+  .comment-form .btn { padding:8px 14px; }
+  .promote-box { margin-top:10px; padding:12px; border:2px dashed var(--accent); border-radius:14px; background:var(--card); }
+  .promote-box h4 { margin:0 0 2px; font-size:.95rem; color:var(--accent); }
+
+  /* Bottom tab bar */
+  .tabbar { position:fixed; left:0; right:0; bottom:0; z-index:20; background:var(--card);
+            border-top:1px solid var(--line); padding-bottom: env(safe-area-inset-bottom);
+            box-shadow:0 -6px 20px rgba(80,40,10,.08); }
+  .tabbar-in { max-width:760px; margin:0 auto; display:flex; padding:6px 8px; gap:6px; }
+  .tab-btn { flex:1; background:none; border:0; cursor:pointer; padding:6px 4px; border-radius:14px; color:var(--muted);
+             display:flex; flex-direction:column; align-items:center; gap:1px; font-size:.72rem; font-weight:600; }
+  .tab-btn .ti { font-size:1.3rem; line-height:1.2; }
+  .tab-btn.active { color:var(--accent); background:var(--accent-soft); }
 </style>
 </head>
 <body>
 
 <!-- LOGIN -->
 <div id="login" class="card hidden">
+  <div class="big">🎉</div>
   <h1>Let's Be Social 2027</h1>
   <p class="muted">Enter your personal PIN</p>
   <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
@@ -121,97 +172,126 @@
 
 <!-- APP -->
 <div id="app" class="wrap hidden">
-  <div class="topbar">
-    <h1>Let's Be Social 2027</h1>
-    <div class="me"><span class="dot" id="meDot"></span><span id="meName"></span>
-      <button id="logoutBtn" class="btn ghost">Log out</button></div>
-  </div>
 
-  <div class="card">
-    <div class="monthbar">
-      <button id="prevBtn" class="btn">‹</button>
-      <h2 id="monthTitle" style="margin:0"></h2>
-      <button id="nextBtn" class="btn">›</button>
+  <header class="hero">
+    <div class="hero-top">
+      <div><div class="kicker">2027</div><h1>Let's Be Social</h1></div>
+      <div class="me">
+        <span class="dot" id="meDot"></span><b id="meName"></b>
+        <button id="refreshBtn" class="pillbtn" title="Refresh">↻</button>
+        <button id="logoutBtn" class="pillbtn">Log out</button>
+      </div>
     </div>
-    <div class="grid" id="grid"></div>
-    <div class="legend">
-      <span>✈️ Away</span><span>🏠 In town</span><span>🎉 Free &amp; keen</span><span>📌 Event</span>
-      <span>(numbers = how many)</span>
+    <div id="nextUp" class="nextup"></div>
+  </header>
+
+  <!-- TAB: CALENDAR -->
+  <section id="tab-calendar">
+    <div class="card">
+      <div class="monthbar">
+        <button id="prevBtn" class="btn">‹</button>
+        <h2 id="monthTitle"></h2>
+        <button id="nextBtn" class="btn">›</button>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div class="legend">
+        <span><i class="sw away"></i>Away</span><span><i class="sw in_town"></i>In town</span>
+        <span><i class="sw keen"></i>Free &amp; keen</span><span><i class="sw ev"></i>Event</span>
+      </div>
     </div>
-  </div>
 
-  <div class="card">
-    <h2 id="dayTitle"></h2>
-    <div id="dayBody"></div>
-    <div id="dayEvents"></div>
-  </div>
-
-  <div class="card">
-    <h2>Upcoming events</h2>
-    <div id="upcoming"></div>
-  </div>
-
-  <div class="card">
-    <h2>💡 Idea pinboard</h2>
-    <p class="muted" style="margin:-4px 0 10px">Rough plans that don't have a date yet. Count yourself in, reply, and promote one to the calendar once a date is picked.</p>
-    <div id="ideas"></div>
-  </div>
-
-  <div class="card">
-    <h2>Post an idea</h2>
-    <label for="iTitle">Idea</label>
-    <input id="iTitle" type="text" maxlength="100" placeholder="e.g. Weekend trip somewhere warm">
-    <label for="iMonth">Rough timing (optional)</label>
-    <select id="iMonth"></select>
-    <label for="iDesc">Details (optional)</label>
-    <textarea id="iDesc" maxlength="500" placeholder="Who, where, budget, vibe…"></textarea>
-    <div style="margin-top:12px"><button id="ideaBtn" class="btn">Post idea</button></div>
-    <div id="ideaError" class="error"></div>
-  </div>
-
-  <div class="card" id="eventFormCard">
-    <h2 id="evFormTitle">Add an event</h2>
-    <label for="eTitle">Title</label>
-    <input id="eTitle" type="text" maxlength="100" placeholder="e.g. Sam's wedding">
-    <div class="row2">
-      <div><label for="eDate">Date</label><input id="eDate" type="date" min="2027-01-01" max="2027-12-31"></div>
-      <div><label for="eEnd">End date (optional)</label><input id="eEnd" type="date" min="2027-01-01" max="2027-12-31"></div>
+    <div class="card">
+      <div class="sechead" style="margin:0 0 10px">
+        <h2 id="dayTitle"></h2>
+        <button class="btn soft small" data-toggle="availFormCard" data-label="＋ My availability">＋ My availability</button>
+      </div>
+      <div id="dayBody"></div>
+      <div id="dayEvents"></div>
     </div>
-    <div class="row2">
-      <div><label for="eCat">Category</label><select id="eCat"></select></div>
-      <div><label for="eLoc">Location (optional)</label><input id="eLoc" type="text" maxlength="100" placeholder="e.g. Lisbon"></div>
-    </div>
-    <label for="eNotes">Notes (optional)</label>
-    <textarea id="eNotes" maxlength="500" placeholder="Details, links, who's hosting…"></textarea>
-    <div style="margin-top:12px; display:flex; gap:8px">
-      <button id="evSaveBtn" class="btn">Add event</button>
-      <button id="evCancelBtn" class="btn ghost hidden">Cancel edit</button>
-    </div>
-    <div id="evError" class="error"></div>
-  </div>
 
-  <div class="card">
-    <h2>Add my availability</h2>
-    <label for="fStatus">Status</label>
-    <select id="fStatus">
-      <option value="away">✈️ Away / Traveling</option>
-      <option value="in_town">🏠 In town / Available</option>
-      <option value="keen">🎉 Free &amp; keen to hang out</option>
-    </select>
-    <div class="row2">
-      <div><label for="fStart">From</label><input id="fStart" type="date" min="2027-01-01" max="2027-12-31"></div>
-      <div><label for="fEnd">To (optional)</label><input id="fEnd" type="date" min="2027-01-01" max="2027-12-31"></div>
+    <div class="card hidden" id="availFormCard">
+      <h2>Add my availability</h2>
+      <label for="fStatus">Status</label>
+      <select id="fStatus">
+        <option value="away">✈️ Away / Traveling</option>
+        <option value="in_town">🏠 In town / Available</option>
+        <option value="keen">🎉 Free &amp; keen to hang out</option>
+      </select>
+      <div class="row2">
+        <div><label for="fStart">From</label><input id="fStart" type="date" min="2027-01-01" max="2027-12-31"></div>
+        <div><label for="fEnd">To (optional)</label><input id="fEnd" type="date" min="2027-01-01" max="2027-12-31"></div>
+      </div>
+      <label for="fNote">Note (optional)</label>
+      <input id="fNote" type="text" maxlength="200" placeholder="e.g. Portugal with family">
+      <div style="margin-top:14px"><button id="addBtn" class="btn">Save</button></div>
+      <div id="formError" class="error"></div>
     </div>
-    <label for="fNote">Note (optional)</label>
-    <input id="fNote" type="text" maxlength="200" placeholder="e.g. Portugal with family">
-    <div style="margin-top:12px"><button id="addBtn" class="btn">Save</button></div>
-    <div id="formError" class="error"></div>
-  </div>
 
-  <div class="card">
-    <h2>Upcoming weekends</h2>
-    <div id="weekends"></div>
-  </div>
+    <div class="card">
+      <h2 style="margin-bottom:8px">Upcoming weekends</h2>
+      <div id="weekends"></div>
+    </div>
+  </section>
+
+  <!-- TAB: EVENTS -->
+  <section id="tab-events" class="hidden">
+    <div class="sechead">
+      <h2>📌 Upcoming events</h2>
+      <button class="btn small" data-toggle="evFormCard" data-label="＋ Add event">＋ Add event</button>
+    </div>
+
+    <div class="card hidden" id="evFormCard">
+      <h2 id="evFormTitle">Add an event</h2>
+      <label for="eTitle">Title</label>
+      <input id="eTitle" type="text" maxlength="100" placeholder="e.g. Sam's wedding">
+      <div class="row2">
+        <div><label for="eDate">Date</label><input id="eDate" type="date" min="2027-01-01" max="2027-12-31"></div>
+        <div><label for="eEnd">End date (optional)</label><input id="eEnd" type="date" min="2027-01-01" max="2027-12-31"></div>
+      </div>
+      <div class="row2">
+        <div><label for="eCat">Category</label><select id="eCat"></select></div>
+        <div><label for="eLoc">Location (optional)</label><input id="eLoc" type="text" maxlength="100" placeholder="e.g. Lisbon"></div>
+      </div>
+      <label for="eNotes">Notes (optional)</label>
+      <textarea id="eNotes" maxlength="500" placeholder="Details, links, who's hosting…"></textarea>
+      <div style="margin-top:14px; display:flex; gap:8px">
+        <button id="evSaveBtn" class="btn">Add event</button>
+        <button id="evCancelBtn" class="btn ghost hidden">Cancel edit</button>
+      </div>
+      <div id="evError" class="error"></div>
+    </div>
+
+    <div class="card"><div id="upcoming"></div></div>
+  </section>
+
+  <!-- TAB: IDEAS -->
+  <section id="tab-ideas" class="hidden">
+    <div class="sechead">
+      <h2>💡 Idea pinboard</h2>
+      <button class="btn small" data-toggle="ideaFormCard" data-label="＋ Post idea">＋ Post idea</button>
+    </div>
+    <p class="muted" style="margin:-4px 2px 12px">Rough plans without a date. Count yourself in, reply, and put one on the calendar once a date is picked.</p>
+
+    <div class="card hidden" id="ideaFormCard">
+      <h2>Post an idea</h2>
+      <label for="iTitle">Idea</label>
+      <input id="iTitle" type="text" maxlength="100" placeholder="e.g. Weekend trip somewhere warm">
+      <label for="iMonth">Rough timing (optional)</label>
+      <select id="iMonth"></select>
+      <label for="iDesc">Details (optional)</label>
+      <textarea id="iDesc" maxlength="500" placeholder="Who, where, budget, vibe…"></textarea>
+      <div style="margin-top:14px"><button id="ideaBtn" class="btn">Post idea</button></div>
+      <div id="ideaError" class="error"></div>
+    </div>
+
+    <div class="card"><div id="ideas"></div></div>
+  </section>
+
+  <nav class="tabbar"><div class="tabbar-in">
+    <button class="tab-btn" data-tab="calendar"><span class="ti">📅</span><span>Calendar</span></button>
+    <button class="tab-btn" data-tab="events"><span class="ti">📌</span><span>Events</span></button>
+    <button class="tab-btn" data-tab="ideas"><span class="ti">💡</span><span>Ideas</span></button>
+  </div></nav>
 </div>
 
 <script>
@@ -225,15 +305,20 @@ const STATUS = {
   keen:    { label: 'Free & keen to hang out',  icon: '🎉' }
 };
 const CATEGORIES = ['Party', 'Dinner', 'Trip', 'Wedding', 'Gig', 'Movie', 'Birthday', 'Sport', 'Other'];
+const CAT_COLORS = { Party:'#d6336c', Dinner:'#e8590c', Trip:'#1c7ed6', Wedding:'#ae3ec9', Gig:'#5f3dc4',
+                     Movie:'#0b7285', Birthday:'#f08c00', Sport:'#2b8a3e', Other:'#868e96' };
+const catColor = c => CAT_COLORS[c] || '#868e96';
 const RSVP = {
   going: { label: '✅ Going' },
   maybe: { label: '🤔 Maybe' },
   no:    { label: "❌ Can't" }
 };
+const TABS = ['calendar', 'events', 'ideas'];
+const DATE_PAIRS = { fStart: 'fEnd', eDate: 'eEnd', pDate: 'pEnd' }; // start input -> end input
 
 // ====== STATE ======
 let pin = localStorage.getItem('f27_pin') || '';
-let me = null, data = null, month = 0, selected = null, editingId = null, promotingId = null;
+let me = null, data = null, month = 0, selected = null, editingId = null, promotingId = null, tab = null;
 const drafts = {}; // unsent comment text, keyed by idea id
 
 // ====== SMALL HELPERS ======
@@ -260,6 +345,36 @@ async function api(action, payload) {
   return j;
 }
 
+// ====== TABS, FORMS, DATE PAIRS ======
+function setTab(name) {
+  if (TABS.indexOf(name) < 0) name = 'calendar';
+  const changed = name !== tab;
+  tab = name;
+  TABS.forEach(t => $('tab-' + t).classList.toggle('hidden', t !== name));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === name));
+  try { localStorage.setItem('f27_tab', name); } catch (e) {}
+  if (changed) window.scrollTo(0, 0);
+}
+
+function setForm(id, open) {
+  $(id).classList.toggle('hidden', !open);
+  const b = document.querySelector('[data-toggle="' + id + '"]');
+  if (b) b.textContent = open ? '✕ Close' : b.getAttribute('data-label');
+}
+
+// Make the End date picker start from the Start date's month, and never be earlier than it
+function syncEnd(startId, endId) {
+  const s = $(startId), e = $(endId);
+  if (!s || !e) return;
+  const min = s.value || (YEAR + '-01-01');
+  e.min = min;
+  if (e.value && e.value < min) e.value = '';
+}
+function syncAll() { Object.keys(DATE_PAIRS).forEach(k => syncEnd(k, DATE_PAIRS[k])); }
+document.addEventListener('change', function (e) {
+  if (e.target.id && DATE_PAIRS[e.target.id]) syncEnd(e.target.id, DATE_PAIRS[e.target.id]);
+});
+
 // ====== LOGIN / STARTUP ======
 function show(which) {
   ['login', 'loading', 'app'].forEach(id => $(id).classList.toggle('hidden', id !== which));
@@ -267,8 +382,7 @@ function show(which) {
 
 async function start() {
   $('eCat').innerHTML = CATEGORIES.map(c => '<option>' + c + '</option>').join('');
-  $('iMonth').innerHTML = '<option value="">Whenever</option>' +
-    MONTHS.map(m => '<option>' + m + '</option>').join('');
+  $('iMonth').innerHTML = '<option value="">Whenever</option>' + MONTHS.map(m => '<option>' + m + '</option>').join('');
   if (!pin) { show('login'); return; }
   show('loading');
   try {
@@ -290,7 +404,9 @@ function enterApp(j) {
   else { month = 0; selected = YEAR + '-01-01'; }
   $('fStart').value = selected;
   $('eDate').value = selected;
+  syncAll();
   show('app');
+  setTab(localStorage.getItem('f27_tab') || 'calendar');
   renderAll();
 }
 
@@ -313,6 +429,13 @@ $('loginBtn').onclick = async function () {
 $('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
 $('logoutBtn').onclick = function () { localStorage.removeItem('f27_pin'); pin = ''; me = null; data = null; show('login'); };
 
+$('refreshBtn').onclick = async function () {
+  const b = this; b.disabled = true; b.innerHTML = '<span class="spin">↻</span>';
+  try { const j = await api('getAll'); data = j.data; renderAll(); }
+  catch (err) { alert(err.message); }
+  b.disabled = false; b.textContent = '↻';
+};
+
 // ====== LOOKUPS ======
 function entriesOn(ds) {
   return data.availability.filter(a => a.startDate <= ds && a.endDate >= ds);
@@ -328,7 +451,16 @@ function eventsOn(ds) {
 }
 
 // ====== RENDERING ======
-function renderAll() { renderMonth(); renderDay(); renderUpcoming(); renderIdeas(); renderWeekends(); }
+function renderAll() { renderNextUp(); renderMonth(); renderDay(); renderUpcoming(); renderIdeas(); renderWeekends(); }
+
+function renderNextUp() {
+  const t = todayStr();
+  const ev = data.events.filter(e => eventEnd(e) >= t).sort((a, b) => a.date.localeCompare(b.date))[0];
+  if (!ev) { $('nextUp').innerHTML = '✨ Nothing on the calendar yet. Add the first event!'; return; }
+  const diff = Math.round((parse(ev.date) - parse(t)) / 864e5);
+  const when = diff < 0 ? 'happening now' : diff === 0 ? 'today' : diff === 1 ? 'tomorrow' : 'in ' + diff + ' days';
+  $('nextUp').innerHTML = '📌 Next up: <b>' + esc(ev.title) + '</b> · ' + when + ' (' + esc(fmt(ev.date, { day: 'numeric', month: 'short' })) + ')';
+}
 
 function renderMonth() {
   $('monthTitle').textContent = MONTHS[month] + ' ' + YEAR;
@@ -347,10 +479,10 @@ function renderMonth() {
     let counts = '';
     Object.keys(STATUS).forEach(k => {
       const n = uniqueUsers(es.filter(e => e.status === k)).length;
-      if (n) counts += '<span>' + STATUS[k].icon + n + '</span>';
+      if (n) counts += '<span class="pill ' + k + '">' + n + '</span>';
     });
     const evN = eventsOn(ds).length;
-    if (evN) counts += '<span>📌' + evN + '</span>';
+    if (evN) counts += '<span class="pill ev">' + evN + '</span>';
     html += '<button class="day' + (col >= 5 ? ' weekend' : '') + (ds === tStr ? ' today' : '') +
             (ds === selected ? ' selected' : '') + '" data-date="' + ds + '">' +
             '<span class="n">' + d + '</span><span class="counts">' + counts + '</span></button>';
@@ -359,7 +491,7 @@ function renderMonth() {
 }
 
 function renderDay() {
-  $('dayTitle').textContent = fmt(selected, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  $('dayTitle').textContent = fmt(selected, { weekday: 'long', day: 'numeric', month: 'long' });
   const es = entriesOn(selected);
   if (!es.length) {
     $('dayBody').innerHTML = '<p class="muted">Nobody has said anything about this day yet.</p>';
@@ -368,7 +500,7 @@ function renderDay() {
     Object.keys(STATUS).forEach(k => {
       const list = es.filter(e => e.status === k);
       if (!list.length) return;
-      html += '<div class="group"><h3>' + STATUS[k].icon + ' ' + STATUS[k].label + '</h3>';
+      html += '<div class="group"><h3 class="st-' + k + '">' + STATUS[k].icon + ' ' + STATUS[k].label + '</h3>';
       list.forEach(e => {
         const u = userById(e.userId);
         const range = e.startDate === e.endDate ? fmt(e.startDate, { day: 'numeric', month: 'short' })
@@ -391,11 +523,12 @@ function eventCard(ev) {
   const rs = data.rsvps.filter(r => r.eventId === ev.id);
   const mine = rs.find(r => r.userId === me.id);
   const myStatus = mine ? mine.status : '';
+  const col = catColor(ev.category);
   const when = ev.endDate && ev.endDate !== ev.date
     ? fmt(ev.date, { weekday: 'short', day: 'numeric', month: 'short' }) + ' – ' + fmt(ev.endDate, { weekday: 'short', day: 'numeric', month: 'short' })
     : fmt(ev.date, { weekday: 'short', day: 'numeric', month: 'short' });
-  let html = '<div class="ev"><div class="ev-head"><div>' +
-    '<span class="ev-title">' + esc(ev.title) + '</span>' + (ev.category ? '<span class="tag">' + esc(ev.category) + '</span>' : '') +
+  let html = '<div class="ev" style="border-left-color:' + col + '"><div class="ev-head"><div>' +
+    '<span class="ev-title">' + esc(ev.title) + '</span>' + (ev.category ? '<span class="tag" style="background:' + col + '">' + esc(ev.category) + '</span>' : '') +
     '<div class="ev-meta">' + esc(when) + (ev.location ? ' · 📍 ' + esc(ev.location) : '') + ' · added by ' + esc(creator.name) + '</div></div>';
   if (ev.createdBy === me.id) {
     html += '<div class="ev-actions"><button class="btn ghost small" data-editev="' + esc(ev.id) + '">Edit</button>' +
@@ -421,7 +554,7 @@ function renderUpcoming() {
   const list = data.events.filter(ev => eventEnd(ev) >= t).sort((a, b) => a.date.localeCompare(b.date));
   $('upcoming').innerHTML = list.length
     ? list.map(eventCard).join('')
-    : '<p class="muted">No upcoming events yet. Add the first one below!</p>';
+    : '<p class="muted">No upcoming events yet. Tap “＋ Add event” to add the first one!</p>';
 }
 
 // ====== IDEAS ======
@@ -437,7 +570,7 @@ function ideaCard(idea) {
   let html = '<div class="ev idea' + (promoted ? ' done' : '') + '"><div class="ev-head"><div>' +
     '<span class="ev-title">' + esc(idea.title) + '</span>' +
     (idea.targetMonth ? '<span class="tag alt">' + esc(idea.targetMonth) + '</span>' : '') +
-    (promoted ? '<span class="tag">On the calendar</span>' : '') +
+    (promoted ? '<span class="tag" style="background:var(--keen)">On the calendar</span>' : '') +
     '<div class="ev-meta">posted by ' + esc(creator.name) + (fmtStamp(idea.createdAt) ? ' · ' + esc(fmtStamp(idea.createdAt)) : '') + '</div></div>';
   if (idea.createdBy === me.id) {
     html += '<div class="ev-actions"><button class="btn ghost small" data-delidea="' + esc(idea.id) + '">Delete</button></div>';
@@ -445,30 +578,27 @@ function ideaCard(idea) {
   html += '</div>';
   if (idea.description) html += '<p class="ev-notes">' + esc(idea.description) + '</p>';
 
-  // Interest row
   html += '<div class="vote-row"><button class="vote-btn' + (iVoted ? ' on' : '') + '" data-vote="' + esc(idea.id) + '">🙋 Count me in!' +
           (votes.length ? ' · ' + votes.length : '') + '</button>';
   if (!promoted) {
-    html += '<button class="btn ghost small" data-promote="' + esc(idea.id) + '">📅 Put on calendar</button>';
+    html += '<button class="btn soft small" data-promote="' + esc(idea.id) + '">📅 Put on calendar</button>';
   } else if (ev) {
-    html += '<button class="btn ghost small" data-date="' + esc(ev.date) + '" data-scroll="1">See it on ' + esc(fmt(ev.date, { day: 'numeric', month: 'short' })) + '</button>';
+    html += '<button class="btn soft small" data-date="' + esc(ev.date) + '" data-scroll="1">See it on ' + esc(fmt(ev.date, { day: 'numeric', month: 'short' })) + '</button>';
   }
   html += '</div>';
   if (votes.length) html += '<div class="attend">' + votes.map(v => chip(userById(v.userId))).join('') + '</div>';
 
-  // Promote form
   if (promotingId === idea.id) {
     html += '<div class="promote-box"><h4>Pick a date for this</h4>' +
       '<div class="row2"><div><label for="pDate">Date</label><input id="pDate" type="date" min="2027-01-01" max="2027-12-31" value="' + esc(selected) + '"></div>' +
-      '<div><label for="pEnd">End date (optional)</label><input id="pEnd" type="date" min="2027-01-01" max="2027-12-31"></div></div>' +
+      '<div><label for="pEnd">End date (optional)</label><input id="pEnd" type="date" min="' + esc(selected) + '" max="2027-12-31"></div></div>' +
       '<div class="row2"><div><label for="pCat">Category</label><select id="pCat">' + CATEGORIES.map(c => '<option>' + c + '</option>').join('') + '</select></div>' +
       '<div><label for="pLoc">Location (optional)</label><input id="pLoc" type="text" maxlength="100"></div></div>' +
-      '<div style="margin-top:10px;display:flex;gap:8px"><button class="btn small" data-promotego="' + esc(idea.id) + '">Create event</button>' +
+      '<div style="margin-top:12px;display:flex;gap:8px"><button class="btn small" data-promotego="' + esc(idea.id) + '">Create event</button>' +
       '<button class="btn ghost small" data-promotecancel="1">Cancel</button></div>' +
       '<div class="error" id="pError"></div></div>';
   }
 
-  // Comments
   html += '<div class="comments">';
   comments.forEach(c => {
     html += '<div class="comment"><span class="who" style="color:' + colorOf(userById(c.userId).color) + '">' + esc(userById(c.userId).name) + '</span>' +
@@ -488,7 +618,7 @@ function renderIdeas() {
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   let html = open.map(ideaCard).join('');
   if (done.length) html += '<div class="subhead">✅ Already on the calendar</div>' + done.map(ideaCard).join('');
-  $('ideas').innerHTML = html || '<p class="muted">No ideas yet. Post the first one below!</p>';
+  $('ideas').innerHTML = html || '<p class="muted">No ideas yet. Tap “＋ Post idea” to add the first one!</p>';
 }
 
 function renderWeekends() {
@@ -530,12 +660,15 @@ function resetEventForm() {
   $('eCat').selectedIndex = 0;
   $('eDate').value = selected;
   $('evError').textContent = '';
+  syncEnd('eDate', 'eEnd');
 }
 
 function startEdit(id) {
   const ev = data.events.find(e => e.id === id);
   if (!ev) return;
+  setTab('events');
   editingId = id;
+  setForm('evFormCard', true);
   $('evFormTitle').textContent = 'Edit event';
   $('evSaveBtn').textContent = 'Save changes';
   $('evCancelBtn').classList.remove('hidden');
@@ -546,10 +679,11 @@ function startEdit(id) {
   }
   $('eCat').value = ev.category || CATEGORIES[0];
   $('evError').textContent = '';
-  $('eventFormCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  syncEnd('eDate', 'eEnd');
+  $('evFormCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-$('evCancelBtn').onclick = resetEventForm;
+$('evCancelBtn').onclick = function () { resetEventForm(); setForm('evFormCard', false); };
 
 $('evSaveBtn').onclick = async function () {
   const title = $('eTitle').value.trim(), date = $('eDate').value, end = $('eEnd').value;
@@ -565,7 +699,9 @@ $('evSaveBtn').onclick = async function () {
     const j = await api(editingId ? 'updateEvent' : 'addEvent', payload);
     data = j.data;
     selected = date; month = parse(date).getMonth();
+    $('fStart').value = date; syncEnd('fStart', 'fEnd');
     resetEventForm();
+    setForm('evFormCard', false);
     renderAll();
   } catch (err) {
     $('evError').textContent = err.message;
@@ -584,6 +720,7 @@ $('ideaBtn').onclick = async function () {
     const j = await api('addIdea', { title: title, description: $('iDesc').value, targetMonth: $('iMonth').value });
     data = j.data;
     $('iTitle').value = ''; $('iDesc').value = ''; $('iMonth').selectedIndex = 0;
+    setForm('ideaFormCard', false);
     renderAll();
   } catch (err) {
     $('ideaError').textContent = err.message;
@@ -597,6 +734,7 @@ function selectDate(ds) {
   month = parse(ds).getMonth();
   $('fStart').value = ds;
   if (!editingId) $('eDate').value = ds;
+  syncAll();
   renderAll();
 }
 
@@ -626,8 +764,28 @@ async function sendComment(ideaId) {
 }
 
 document.addEventListener('click', async function (e) {
+  // Tab bar
+  const tabBtn = e.target.closest('[data-tab]');
+  if (tabBtn) { setTab(tabBtn.getAttribute('data-tab')); return; }
+
+  // Open/close forms
+  const tg = e.target.closest('[data-toggle]');
+  if (tg) {
+    const id = tg.getAttribute('data-toggle');
+    const open = $(id).classList.contains('hidden');
+    if (id === 'evFormCard') {
+      if (open && !editingId) resetEventForm();
+      if (!open) resetEventForm();
+    }
+    if (id === 'availFormCard' && open) { $('fStart').value = selected; syncEnd('fStart', 'fEnd'); }
+    setForm(id, open);
+    if (open) $(id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
   const dayBtn = e.target.closest('[data-date]');
   if (dayBtn) {
+    if (tab !== 'calendar') setTab('calendar');
     selectDate(dayBtn.getAttribute('data-date'));
     if (dayBtn.hasAttribute('data-scroll')) window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
@@ -665,7 +823,7 @@ document.addEventListener('click', async function (e) {
     try {
       const id = delEv.getAttribute('data-delev');
       const j = await api('deleteEvent', { id: id }); data = j.data;
-      if (editingId === id) resetEventForm();
+      if (editingId === id) { resetEventForm(); setForm('evFormCard', false); }
       renderAll();
     } catch (err) { alert(err.message); delEv.disabled = false; }
     return;
@@ -713,6 +871,7 @@ document.addEventListener('click', async function (e) {
       data = j.data; promotingId = null;
       selected = date; month = parse(date).getMonth();
       $('fStart').value = date; if (!editingId) $('eDate').value = date;
+      syncAll();
       renderAll();
     } catch (err) {
       $('pError').textContent = err.message;
@@ -734,6 +893,8 @@ $('addBtn').onclick = async function () {
     data = j.data;
     $('fNote').value = ''; $('fEnd').value = '';
     selected = start; month = parse(start).getMonth();
+    setForm('availFormCard', false);
+    syncAll();
     renderAll();
   } catch (err) {
     $('formError').textContent = err.message;
