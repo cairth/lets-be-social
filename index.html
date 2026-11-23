@@ -75,6 +75,7 @@
   .ev-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
   .ev-title { font-weight:700; font-size:1rem; }
   .tag { display:inline-block; font-size:.7rem; background:var(--accent); color:#fff; border-radius:99px; padding:1px 8px; margin-left:6px; vertical-align:middle; }
+  .tag.alt { background:var(--muted); }
   .ev-meta { color:var(--muted); font-size:.82rem; margin-top:2px; }
   .ev-notes { font-size:.88rem; margin:8px 0 0; white-space:pre-wrap; }
   .rsvp { display:flex; gap:6px; margin:10px 0 6px; flex-wrap:wrap; }
@@ -87,6 +88,21 @@
   .attend .lbl { color:var(--muted); margin-right:4px; }
   .ev-actions { display:flex; gap:6px; }
   .subhead { font-size:.85rem; color:var(--muted); margin:14px 0 8px; font-weight:600; }
+
+  /* Ideas */
+  .idea.done { opacity:.75; }
+  .vote-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:10px 0 6px; }
+  .vote-btn { padding:7px 12px; border:1px solid var(--line); border-radius:10px; background:var(--card); cursor:pointer; font-size:.85rem; }
+  .vote-btn.on { background:var(--keen); color:#fff; border-color:var(--keen); }
+  .comments { margin-top:10px; border-top:1px solid var(--line); padding-top:8px; }
+  .comment { font-size:.86rem; padding:4px 0; }
+  .comment .who { font-weight:600; margin-right:4px; }
+  .comment .when { color:var(--muted); font-size:.74rem; margin-left:6px; }
+  .comment-form { display:flex; gap:6px; margin-top:8px; }
+  .comment-form input { flex:1; padding:8px 10px; }
+  .comment-form .btn { padding:8px 12px; }
+  .promote-box { margin-top:10px; padding:10px; border:1px dashed var(--accent); border-radius:10px; background:var(--card); }
+  .promote-box h4 { margin:0 0 4px; font-size:.9rem; }
 </style>
 </head>
 <body>
@@ -133,6 +149,24 @@
   <div class="card">
     <h2>Upcoming events</h2>
     <div id="upcoming"></div>
+  </div>
+
+  <div class="card">
+    <h2>💡 Idea pinboard</h2>
+    <p class="muted" style="margin:-4px 0 10px">Rough plans that don't have a date yet. Count yourself in, reply, and promote one to the calendar once a date is picked.</p>
+    <div id="ideas"></div>
+  </div>
+
+  <div class="card">
+    <h2>Post an idea</h2>
+    <label for="iTitle">Idea</label>
+    <input id="iTitle" type="text" maxlength="100" placeholder="e.g. Weekend trip somewhere warm">
+    <label for="iMonth">Rough timing (optional)</label>
+    <select id="iMonth"></select>
+    <label for="iDesc">Details (optional)</label>
+    <textarea id="iDesc" maxlength="500" placeholder="Who, where, budget, vibe…"></textarea>
+    <div style="margin-top:12px"><button id="ideaBtn" class="btn">Post idea</button></div>
+    <div id="ideaError" class="error"></div>
   </div>
 
   <div class="card" id="eventFormCard">
@@ -199,7 +233,8 @@ const RSVP = {
 
 // ====== STATE ======
 let pin = localStorage.getItem('f27_pin') || '';
-let me = null, data = null, month = 0, selected = null, editingId = null;
+let me = null, data = null, month = 0, selected = null, editingId = null, promotingId = null;
+const drafts = {}; // unsent comment text, keyed by idea id
 
 // ====== SMALL HELPERS ======
 const $ = id => document.getElementById(id);
@@ -208,6 +243,7 @@ const pad = n => String(n).padStart(2, '0');
 const ymd = (y, m, d) => y + '-' + pad(m + 1) + '-' + pad(d);
 const parse = ds => { const p = ds.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); };
 const fmt = (ds, opts) => parse(ds).toLocaleDateString('en-GB', opts);
+const fmtStamp = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); };
 const colorOf = c => /^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#888888';
 const userById = id => data.users.find(u => u.id === id) || { name: 'Someone', color: '#888888' };
 const chip = u => '<span class="chip"><span class="dot" style="background:' + colorOf(u.color) + '"></span>' + esc(u.name) + '</span>';
@@ -231,6 +267,8 @@ function show(which) {
 
 async function start() {
   $('eCat').innerHTML = CATEGORIES.map(c => '<option>' + c + '</option>').join('');
+  $('iMonth').innerHTML = '<option value="">Whenever</option>' +
+    MONTHS.map(m => '<option>' + m + '</option>').join('');
   if (!pin) { show('login'); return; }
   show('loading');
   try {
@@ -290,7 +328,7 @@ function eventsOn(ds) {
 }
 
 // ====== RENDERING ======
-function renderAll() { renderMonth(); renderDay(); renderUpcoming(); renderWeekends(); }
+function renderAll() { renderMonth(); renderDay(); renderUpcoming(); renderIdeas(); renderWeekends(); }
 
 function renderMonth() {
   $('monthTitle').textContent = MONTHS[month] + ' ' + YEAR;
@@ -386,6 +424,73 @@ function renderUpcoming() {
     : '<p class="muted">No upcoming events yet. Add the first one below!</p>';
 }
 
+// ====== IDEAS ======
+function ideaCard(idea) {
+  const creator = userById(idea.createdBy);
+  const votes = data.ideaVotes.filter(v => v.ideaId === idea.id);
+  const iVoted = votes.some(v => v.userId === me.id);
+  const comments = data.comments.filter(c => c.ideaId === idea.id)
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  const promoted = idea.status === 'promoted';
+  const ev = promoted ? data.events.find(e => e.id === idea.promotedEventId) : null;
+
+  let html = '<div class="ev idea' + (promoted ? ' done' : '') + '"><div class="ev-head"><div>' +
+    '<span class="ev-title">' + esc(idea.title) + '</span>' +
+    (idea.targetMonth ? '<span class="tag alt">' + esc(idea.targetMonth) + '</span>' : '') +
+    (promoted ? '<span class="tag">On the calendar</span>' : '') +
+    '<div class="ev-meta">posted by ' + esc(creator.name) + (fmtStamp(idea.createdAt) ? ' · ' + esc(fmtStamp(idea.createdAt)) : '') + '</div></div>';
+  if (idea.createdBy === me.id) {
+    html += '<div class="ev-actions"><button class="btn ghost small" data-delidea="' + esc(idea.id) + '">Delete</button></div>';
+  }
+  html += '</div>';
+  if (idea.description) html += '<p class="ev-notes">' + esc(idea.description) + '</p>';
+
+  // Interest row
+  html += '<div class="vote-row"><button class="vote-btn' + (iVoted ? ' on' : '') + '" data-vote="' + esc(idea.id) + '">🙋 Count me in!' +
+          (votes.length ? ' · ' + votes.length : '') + '</button>';
+  if (!promoted) {
+    html += '<button class="btn ghost small" data-promote="' + esc(idea.id) + '">📅 Put on calendar</button>';
+  } else if (ev) {
+    html += '<button class="btn ghost small" data-date="' + esc(ev.date) + '" data-scroll="1">See it on ' + esc(fmt(ev.date, { day: 'numeric', month: 'short' })) + '</button>';
+  }
+  html += '</div>';
+  if (votes.length) html += '<div class="attend">' + votes.map(v => chip(userById(v.userId))).join('') + '</div>';
+
+  // Promote form
+  if (promotingId === idea.id) {
+    html += '<div class="promote-box"><h4>Pick a date for this</h4>' +
+      '<div class="row2"><div><label for="pDate">Date</label><input id="pDate" type="date" min="2027-01-01" max="2027-12-31" value="' + esc(selected) + '"></div>' +
+      '<div><label for="pEnd">End date (optional)</label><input id="pEnd" type="date" min="2027-01-01" max="2027-12-31"></div></div>' +
+      '<div class="row2"><div><label for="pCat">Category</label><select id="pCat">' + CATEGORIES.map(c => '<option>' + c + '</option>').join('') + '</select></div>' +
+      '<div><label for="pLoc">Location (optional)</label><input id="pLoc" type="text" maxlength="100"></div></div>' +
+      '<div style="margin-top:10px;display:flex;gap:8px"><button class="btn small" data-promotego="' + esc(idea.id) + '">Create event</button>' +
+      '<button class="btn ghost small" data-promotecancel="1">Cancel</button></div>' +
+      '<div class="error" id="pError"></div></div>';
+  }
+
+  // Comments
+  html += '<div class="comments">';
+  comments.forEach(c => {
+    html += '<div class="comment"><span class="who" style="color:' + colorOf(userById(c.userId).color) + '">' + esc(userById(c.userId).name) + '</span>' +
+            esc(c.text) + '<span class="when">' + esc(fmtStamp(c.createdAt)) + '</span></div>';
+  });
+  if (!comments.length) html += '<div class="muted">No replies yet</div>';
+  html += '<div class="comment-form"><input type="text" maxlength="300" placeholder="Add a reply…" data-cinput="' + esc(idea.id) + '" value="' + esc(drafts[idea.id] || '') + '">' +
+          '<button class="btn" data-comment="' + esc(idea.id) + '">Reply</button></div></div>';
+  return html + '</div>';
+}
+
+function renderIdeas() {
+  const votesFor = id => data.ideaVotes.filter(v => v.ideaId === id).length;
+  const open = data.ideas.filter(i => i.status !== 'promoted')
+    .sort((a, b) => votesFor(b.id) - votesFor(a.id) || String(b.createdAt).localeCompare(String(a.createdAt)));
+  const done = data.ideas.filter(i => i.status === 'promoted')
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  let html = open.map(ideaCard).join('');
+  if (done.length) html += '<div class="subhead">✅ Already on the calendar</div>' + done.map(ideaCard).join('');
+  $('ideas').innerHTML = html || '<p class="muted">No ideas yet. Post the first one below!</p>';
+}
+
 function renderWeekends() {
   const today = new Date();
   let d = new Date(Math.max(today.getTime(), new Date(YEAR, 0, 1).getTime()));
@@ -406,7 +511,7 @@ function renderWeekends() {
     const seenEv = {};
     evs.forEach(ev => { if (!seenEv[ev.id]) { seenEv[ev.id] = 1; body += '<div>📌 ' + esc(ev.title) + '</div>'; } });
     if (!body) body = '<div class="muted">No info yet</div>';
-    html += '<button class="weekend-row" data-date="' + sat + '"><div class="when">' +
+    html += '<button class="weekend-row" data-date="' + sat + '" data-scroll="1"><div class="when">' +
             esc(fmt(sat, { day: 'numeric', month: 'short' }) + ' – ' + fmt(sun, { day: 'numeric', month: 'short' })) +
             '</div>' + body + '</button>';
     shown++;
@@ -469,6 +574,23 @@ $('evSaveBtn').onclick = async function () {
   $('evSaveBtn').disabled = false;
 };
 
+// ====== IDEA FORM ======
+$('ideaBtn').onclick = async function () {
+  const title = $('iTitle').value.trim();
+  $('ideaError').textContent = '';
+  if (!title) { $('ideaError').textContent = 'Give your idea a title.'; return; }
+  $('ideaBtn').disabled = true; $('ideaBtn').textContent = 'Posting…';
+  try {
+    const j = await api('addIdea', { title: title, description: $('iDesc').value, targetMonth: $('iMonth').value });
+    data = j.data;
+    $('iTitle').value = ''; $('iDesc').value = ''; $('iMonth').selectedIndex = 0;
+    renderAll();
+  } catch (err) {
+    $('ideaError').textContent = err.message;
+  }
+  $('ideaBtn').disabled = false; $('ideaBtn').textContent = 'Post idea';
+};
+
 // ====== INTERACTIONS ======
 function selectDate(ds) {
   selected = ds;
@@ -481,9 +603,35 @@ function selectDate(ds) {
 $('prevBtn').onclick = function () { if (month > 0) { month--; renderMonth(); } };
 $('nextBtn').onclick = function () { if (month < 11) { month++; renderMonth(); } };
 
+// Remember unsent comment text so re-renders don't wipe it
+document.addEventListener('input', function (e) {
+  if (e.target.hasAttribute && e.target.hasAttribute('data-cinput')) drafts[e.target.getAttribute('data-cinput')] = e.target.value;
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && e.target.hasAttribute && e.target.hasAttribute('data-cinput')) {
+    const btn = e.target.parentElement.querySelector('[data-comment]');
+    if (btn) btn.click();
+  }
+});
+
+async function sendComment(ideaId) {
+  const text = (drafts[ideaId] || '').trim();
+  if (!text) return;
+  try {
+    const j = await api('addComment', { ideaId: ideaId, text: text });
+    data = j.data;
+    delete drafts[ideaId];
+  } catch (err) { alert(err.message); }
+  renderAll();
+}
+
 document.addEventListener('click', async function (e) {
   const dayBtn = e.target.closest('[data-date]');
-  if (dayBtn) { selectDate(dayBtn.getAttribute('data-date')); if (dayBtn.classList.contains('weekend-row')) window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  if (dayBtn) {
+    selectDate(dayBtn.getAttribute('data-date'));
+    if (dayBtn.hasAttribute('data-scroll')) window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
 
   const delBtn = e.target.closest('[data-del]');
   if (delBtn) {
@@ -520,6 +668,56 @@ document.addEventListener('click', async function (e) {
       if (editingId === id) resetEventForm();
       renderAll();
     } catch (err) { alert(err.message); delEv.disabled = false; }
+    return;
+  }
+
+  // ----- Ideas -----
+  const voteBtn = e.target.closest('[data-vote]');
+  if (voteBtn) {
+    document.querySelectorAll('[data-vote]').forEach(b => b.disabled = true);
+    try { const j = await api('toggleVote', { ideaId: voteBtn.getAttribute('data-vote') }); data = j.data; }
+    catch (err) { alert(err.message); }
+    renderAll();
+    return;
+  }
+
+  const commentBtn = e.target.closest('[data-comment]');
+  if (commentBtn) { commentBtn.disabled = true; await sendComment(commentBtn.getAttribute('data-comment')); return; }
+
+  const delIdea = e.target.closest('[data-delidea]');
+  if (delIdea) {
+    if (!confirm('Delete this idea and its replies?')) return;
+    delIdea.disabled = true;
+    try { const j = await api('deleteIdea', { id: delIdea.getAttribute('data-delidea') }); data = j.data; renderAll(); }
+    catch (err) { alert(err.message); delIdea.disabled = false; }
+    return;
+  }
+
+  const promoteBtn = e.target.closest('[data-promote]');
+  if (promoteBtn) { promotingId = promoteBtn.getAttribute('data-promote'); renderIdeas(); return; }
+
+  if (e.target.closest('[data-promotecancel]')) { promotingId = null; renderIdeas(); return; }
+
+  const goBtn = e.target.closest('[data-promotego]');
+  if (goBtn) {
+    const date = $('pDate').value, end = $('pEnd').value;
+    $('pError').textContent = '';
+    if (!date) { $('pError').textContent = 'Pick a date.'; return; }
+    if (end && end < date) { $('pError').textContent = 'The end date is before the start date.'; return; }
+    goBtn.disabled = true; goBtn.textContent = 'Creating…';
+    try {
+      const j = await api('promoteIdea', {
+        ideaId: goBtn.getAttribute('data-promotego'), date: date, endDate: end,
+        category: $('pCat').value, location: $('pLoc').value
+      });
+      data = j.data; promotingId = null;
+      selected = date; month = parse(date).getMonth();
+      $('fStart').value = date; if (!editingId) $('eDate').value = date;
+      renderAll();
+    } catch (err) {
+      $('pError').textContent = err.message;
+      goBtn.disabled = false; goBtn.textContent = 'Create event';
+    }
   }
 });
 
