@@ -7,7 +7,7 @@
 <style>
   :root {
     --bg:#f6f5f2; --card:#ffffff; --text:#1f2328; --muted:#6b7280; --line:#e5e3dd;
-    --accent:#2a9d8f; --away:#c0392b; --town:#3498db; --keen:#27ae60;
+    --accent:#2a9d8f; --away:#c0392b; --town:#3498db; --keen:#27ae60; --maybe:#e0a100;
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg:#16181a; --card:#202326; --text:#eceff1; --muted:#9aa3ab; --line:#33383d; }
@@ -20,8 +20,9 @@
   .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px; }
   h1 { font-size:1.3rem; margin:0; }
   h2 { font-size:1.05rem; margin:0 0 10px; }
-  button, input, select { font: inherit; color: inherit; }
-  input, select { width:100%; padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  input, select, textarea { width:100%; padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); }
+  textarea { resize: vertical; min-height:60px; }
   label { display:block; font-size:.8rem; color:var(--muted); margin:10px 0 4px; }
   .btn { background:var(--accent); color:#fff; border:0; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:600; }
   .btn:disabled { opacity:.6; cursor:default; }
@@ -67,6 +68,25 @@
   .weekend-row:first-of-type { border-top:0; }
   .weekend-row .when { font-weight:600; font-size:.9rem; }
   .muted { color:var(--muted); font-size:.85rem; }
+
+  /* Events */
+  .ev { border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px; background:var(--bg); }
+  .ev:last-child { margin-bottom:0; }
+  .ev-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .ev-title { font-weight:700; font-size:1rem; }
+  .tag { display:inline-block; font-size:.7rem; background:var(--accent); color:#fff; border-radius:99px; padding:1px 8px; margin-left:6px; vertical-align:middle; }
+  .ev-meta { color:var(--muted); font-size:.82rem; margin-top:2px; }
+  .ev-notes { font-size:.88rem; margin:8px 0 0; white-space:pre-wrap; }
+  .rsvp { display:flex; gap:6px; margin:10px 0 6px; flex-wrap:wrap; }
+  .rsvp button { flex:1; min-width:84px; padding:7px 6px; border:1px solid var(--line); border-radius:10px;
+                 background:var(--card); cursor:pointer; font-size:.85rem; }
+  .rsvp button.on.going { background:var(--keen); color:#fff; border-color:var(--keen); }
+  .rsvp button.on.maybe { background:var(--maybe); color:#fff; border-color:var(--maybe); }
+  .rsvp button.on.no { background:var(--away); color:#fff; border-color:var(--away); }
+  .attend { font-size:.82rem; }
+  .attend .lbl { color:var(--muted); margin-right:4px; }
+  .ev-actions { display:flex; gap:6px; }
+  .subhead { font-size:.85rem; color:var(--muted); margin:14px 0 8px; font-weight:600; }
 </style>
 </head>
 <body>
@@ -99,14 +119,41 @@
     </div>
     <div class="grid" id="grid"></div>
     <div class="legend">
-      <span>✈️ Away</span><span>🏠 In town</span><span>🎉 Free &amp; keen</span>
-      <span>(numbers = how many friends)</span>
+      <span>✈️ Away</span><span>🏠 In town</span><span>🎉 Free &amp; keen</span><span>📌 Event</span>
+      <span>(numbers = how many)</span>
     </div>
   </div>
 
   <div class="card">
     <h2 id="dayTitle"></h2>
     <div id="dayBody"></div>
+    <div id="dayEvents"></div>
+  </div>
+
+  <div class="card">
+    <h2>Upcoming events</h2>
+    <div id="upcoming"></div>
+  </div>
+
+  <div class="card" id="eventFormCard">
+    <h2 id="evFormTitle">Add an event</h2>
+    <label for="eTitle">Title</label>
+    <input id="eTitle" type="text" maxlength="100" placeholder="e.g. Sam's wedding">
+    <div class="row2">
+      <div><label for="eDate">Date</label><input id="eDate" type="date" min="2027-01-01" max="2027-12-31"></div>
+      <div><label for="eEnd">End date (optional)</label><input id="eEnd" type="date" min="2027-01-01" max="2027-12-31"></div>
+    </div>
+    <div class="row2">
+      <div><label for="eCat">Category</label><select id="eCat"></select></div>
+      <div><label for="eLoc">Location (optional)</label><input id="eLoc" type="text" maxlength="100" placeholder="e.g. Lisbon"></div>
+    </div>
+    <label for="eNotes">Notes (optional)</label>
+    <textarea id="eNotes" maxlength="500" placeholder="Details, links, who's hosting…"></textarea>
+    <div style="margin-top:12px; display:flex; gap:8px">
+      <button id="evSaveBtn" class="btn">Add event</button>
+      <button id="evCancelBtn" class="btn ghost hidden">Cancel edit</button>
+    </div>
+    <div id="evError" class="error"></div>
   </div>
 
   <div class="card">
@@ -143,10 +190,16 @@ const STATUS = {
   in_town: { label: 'In town / Available',      icon: '🏠' },
   keen:    { label: 'Free & keen to hang out',  icon: '🎉' }
 };
+const CATEGORIES = ['Party', 'Dinner', 'Trip', 'Wedding', 'Gig', 'Movie', 'Birthday', 'Sport', 'Other'];
+const RSVP = {
+  going: { label: '✅ Going' },
+  maybe: { label: '🤔 Maybe' },
+  no:    { label: "❌ Can't" }
+};
 
 // ====== STATE ======
 let pin = localStorage.getItem('f27_pin') || '';
-let me = null, data = null, month = 0, selected = null;
+let me = null, data = null, month = 0, selected = null, editingId = null;
 
 // ====== SMALL HELPERS ======
 const $ = id => document.getElementById(id);
@@ -158,6 +211,7 @@ const fmt = (ds, opts) => parse(ds).toLocaleDateString('en-GB', opts);
 const colorOf = c => /^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#888888';
 const userById = id => data.users.find(u => u.id === id) || { name: 'Someone', color: '#888888' };
 const chip = u => '<span class="chip"><span class="dot" style="background:' + colorOf(u.color) + '"></span>' + esc(u.name) + '</span>';
+const todayStr = () => { const t = new Date(); return ymd(t.getFullYear(), t.getMonth(), t.getDate()); };
 
 async function api(action, payload) {
   const res = await fetch(API_URL, {
@@ -176,6 +230,7 @@ function show(which) {
 }
 
 async function start() {
+  $('eCat').innerHTML = CATEGORIES.map(c => '<option>' + c + '</option>').join('');
   if (!pin) { show('login'); return; }
   show('loading');
   try {
@@ -196,6 +251,7 @@ function enterApp(j) {
   if (now.getFullYear() === YEAR) { month = now.getMonth(); selected = ymd(YEAR, month, now.getDate()); }
   else { month = 0; selected = YEAR + '-01-01'; }
   $('fStart').value = selected;
+  $('eDate').value = selected;
   show('app');
   renderAll();
 }
@@ -219,7 +275,7 @@ $('loginBtn').onclick = async function () {
 $('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
 $('logoutBtn').onclick = function () { localStorage.removeItem('f27_pin'); pin = ''; me = null; data = null; show('login'); };
 
-// ====== AVAILABILITY LOOKUPS ======
+// ====== LOOKUPS ======
 function entriesOn(ds) {
   return data.availability.filter(a => a.startDate <= ds && a.endDate >= ds);
 }
@@ -228,9 +284,13 @@ function uniqueUsers(entries) {
   entries.forEach(e => { if (!seen[e.userId]) { seen[e.userId] = 1; out.push(e.userId); } });
   return out;
 }
+function eventEnd(ev) { return ev.endDate || ev.date; }
+function eventsOn(ds) {
+  return data.events.filter(ev => ev.date <= ds && eventEnd(ev) >= ds);
+}
 
 // ====== RENDERING ======
-function renderAll() { renderMonth(); renderDay(); renderWeekends(); }
+function renderAll() { renderMonth(); renderDay(); renderUpcoming(); renderWeekends(); }
 
 function renderMonth() {
   $('monthTitle').textContent = MONTHS[month] + ' ' + YEAR;
@@ -239,7 +299,7 @@ function renderMonth() {
   const first = new Date(YEAR, month, 1);
   const offset = (first.getDay() + 6) % 7; // Monday first
   const daysIn = new Date(YEAR, month + 1, 0).getDate();
-  const todayStr = (() => { const t = new Date(); return ymd(t.getFullYear(), t.getMonth(), t.getDate()); })();
+  const tStr = todayStr();
   let html = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => '<div class="dow">' + d + '</div>').join('');
   for (let i = 0; i < offset; i++) html += '<div class="day empty"></div>';
   for (let d = 1; d <= daysIn; d++) {
@@ -251,7 +311,9 @@ function renderMonth() {
       const n = uniqueUsers(es.filter(e => e.status === k)).length;
       if (n) counts += '<span>' + STATUS[k].icon + n + '</span>';
     });
-    html += '<button class="day' + (col >= 5 ? ' weekend' : '') + (ds === todayStr ? ' today' : '') +
+    const evN = eventsOn(ds).length;
+    if (evN) counts += '<span>📌' + evN + '</span>';
+    html += '<button class="day' + (col >= 5 ? ' weekend' : '') + (ds === tStr ? ' today' : '') +
             (ds === selected ? ' selected' : '') + '" data-date="' + ds + '">' +
             '<span class="n">' + d + '</span><span class="counts">' + counts + '</span></button>';
   }
@@ -261,22 +323,67 @@ function renderMonth() {
 function renderDay() {
   $('dayTitle').textContent = fmt(selected, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const es = entriesOn(selected);
-  if (!es.length) { $('dayBody').innerHTML = '<p class="muted">Nobody has said anything about this day yet.</p>'; return; }
-  let html = '';
-  Object.keys(STATUS).forEach(k => {
-    const list = es.filter(e => e.status === k);
-    if (!list.length) return;
-    html += '<div class="group"><h3>' + STATUS[k].icon + ' ' + STATUS[k].label + '</h3>';
-    list.forEach(e => {
-      const u = userById(e.userId);
-      const range = e.startDate === e.endDate ? fmt(e.startDate, { day: 'numeric', month: 'short' })
-        : fmt(e.startDate, { day: 'numeric', month: 'short' }) + ' – ' + fmt(e.endDate, { day: 'numeric', month: 'short' });
-      html += '<div class="entry"><div>' + chip(u) + '<div class="meta">' + esc(range) + (e.note ? ' · ' + esc(e.note) : '') + '</div></div>' +
-              (e.userId === me.id ? '<button class="btn ghost small" data-del="' + esc(e.id) + '">Delete</button>' : '') + '</div>';
+  if (!es.length) {
+    $('dayBody').innerHTML = '<p class="muted">Nobody has said anything about this day yet.</p>';
+  } else {
+    let html = '';
+    Object.keys(STATUS).forEach(k => {
+      const list = es.filter(e => e.status === k);
+      if (!list.length) return;
+      html += '<div class="group"><h3>' + STATUS[k].icon + ' ' + STATUS[k].label + '</h3>';
+      list.forEach(e => {
+        const u = userById(e.userId);
+        const range = e.startDate === e.endDate ? fmt(e.startDate, { day: 'numeric', month: 'short' })
+          : fmt(e.startDate, { day: 'numeric', month: 'short' }) + ' – ' + fmt(e.endDate, { day: 'numeric', month: 'short' });
+        html += '<div class="entry"><div>' + chip(u) + '<div class="meta">' + esc(range) + (e.note ? ' · ' + esc(e.note) : '') + '</div></div>' +
+                (e.userId === me.id ? '<button class="btn ghost small" data-del="' + esc(e.id) + '">Delete</button>' : '') + '</div>';
+      });
+      html += '</div>';
     });
-    html += '</div>';
+    $('dayBody').innerHTML = html;
+  }
+  const evs = eventsOn(selected);
+  $('dayEvents').innerHTML = evs.length
+    ? '<div class="subhead">📌 Events on this day</div>' + evs.map(eventCard).join('')
+    : '';
+}
+
+function eventCard(ev) {
+  const creator = userById(ev.createdBy);
+  const rs = data.rsvps.filter(r => r.eventId === ev.id);
+  const mine = rs.find(r => r.userId === me.id);
+  const myStatus = mine ? mine.status : '';
+  const when = ev.endDate && ev.endDate !== ev.date
+    ? fmt(ev.date, { weekday: 'short', day: 'numeric', month: 'short' }) + ' – ' + fmt(ev.endDate, { weekday: 'short', day: 'numeric', month: 'short' })
+    : fmt(ev.date, { weekday: 'short', day: 'numeric', month: 'short' });
+  let html = '<div class="ev"><div class="ev-head"><div>' +
+    '<span class="ev-title">' + esc(ev.title) + '</span>' + (ev.category ? '<span class="tag">' + esc(ev.category) + '</span>' : '') +
+    '<div class="ev-meta">' + esc(when) + (ev.location ? ' · 📍 ' + esc(ev.location) : '') + ' · added by ' + esc(creator.name) + '</div></div>';
+  if (ev.createdBy === me.id) {
+    html += '<div class="ev-actions"><button class="btn ghost small" data-editev="' + esc(ev.id) + '">Edit</button>' +
+            '<button class="btn ghost small" data-delev="' + esc(ev.id) + '">Delete</button></div>';
+  }
+  html += '</div>';
+  if (ev.notes) html += '<p class="ev-notes">' + esc(ev.notes) + '</p>';
+  html += '<div class="rsvp">';
+  Object.keys(RSVP).forEach(k => {
+    html += '<button class="' + k + (myStatus === k ? ' on' : '') + '" data-rsvp="' + esc(ev.id) + '|' + k + '">' + RSVP[k].label + '</button>';
   });
-  $('dayBody').innerHTML = html;
+  html += '</div>';
+  Object.keys(RSVP).forEach(k => {
+    const list = rs.filter(r => r.status === k);
+    if (list.length) html += '<div class="attend"><span class="lbl">' + RSVP[k].label + ':</span>' + list.map(r => chip(userById(r.userId))).join('') + '</div>';
+  });
+  if (!rs.length) html += '<div class="attend muted">No replies yet</div>';
+  return html + '</div>';
+}
+
+function renderUpcoming() {
+  const t = todayStr();
+  const list = data.events.filter(ev => eventEnd(ev) >= t).sort((a, b) => a.date.localeCompare(b.date));
+  $('upcoming').innerHTML = list.length
+    ? list.map(eventCard).join('')
+    : '<p class="muted">No upcoming events yet. Add the first one below!</p>';
 }
 
 function renderWeekends() {
@@ -295,6 +402,9 @@ function renderWeekends() {
       const ids = uniqueUsers(es.filter(e => e.status === k));
       if (ids.length) body += '<div>' + STATUS[k].icon + ' ' + ids.map(id => chip(userById(id))).join('') + '</div>';
     });
+    const evs = eventsOn(sat).concat(eventsOn(sun));
+    const seenEv = {};
+    evs.forEach(ev => { if (!seenEv[ev.id]) { seenEv[ev.id] = 1; body += '<div>📌 ' + esc(ev.title) + '</div>'; } });
     if (!body) body = '<div class="muted">No info yet</div>';
     html += '<button class="weekend-row" data-date="' + sat + '"><div class="when">' +
             esc(fmt(sat, { day: 'numeric', month: 'short' }) + ' – ' + fmt(sun, { day: 'numeric', month: 'short' })) +
@@ -305,11 +415,66 @@ function renderWeekends() {
   $('weekends').innerHTML = html || '<p class="muted">No more weekends in 2027!</p>';
 }
 
+// ====== EVENT FORM ======
+function resetEventForm() {
+  editingId = null;
+  $('evFormTitle').textContent = 'Add an event';
+  $('evSaveBtn').textContent = 'Add event';
+  $('evCancelBtn').classList.add('hidden');
+  $('eTitle').value = ''; $('eEnd').value = ''; $('eLoc').value = ''; $('eNotes').value = '';
+  $('eCat').selectedIndex = 0;
+  $('eDate').value = selected;
+  $('evError').textContent = '';
+}
+
+function startEdit(id) {
+  const ev = data.events.find(e => e.id === id);
+  if (!ev) return;
+  editingId = id;
+  $('evFormTitle').textContent = 'Edit event';
+  $('evSaveBtn').textContent = 'Save changes';
+  $('evCancelBtn').classList.remove('hidden');
+  $('eTitle').value = ev.title; $('eDate').value = ev.date; $('eEnd').value = ev.endDate || '';
+  $('eLoc').value = ev.location || ''; $('eNotes').value = ev.notes || '';
+  if (ev.category && CATEGORIES.indexOf(ev.category) < 0) {
+    $('eCat').insertAdjacentHTML('beforeend', '<option>' + esc(ev.category) + '</option>');
+  }
+  $('eCat').value = ev.category || CATEGORIES[0];
+  $('evError').textContent = '';
+  $('eventFormCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+$('evCancelBtn').onclick = resetEventForm;
+
+$('evSaveBtn').onclick = async function () {
+  const title = $('eTitle').value.trim(), date = $('eDate').value, end = $('eEnd').value;
+  $('evError').textContent = '';
+  if (!title) { $('evError').textContent = 'Give the event a title.'; return; }
+  if (!date) { $('evError').textContent = 'Pick a date.'; return; }
+  if (end && end < date) { $('evError').textContent = 'The end date is before the start date.'; return; }
+  $('evSaveBtn').disabled = true; $('evSaveBtn').textContent = 'Saving…';
+  try {
+    const payload = { title: title, date: date, endDate: end, category: $('eCat').value,
+                      location: $('eLoc').value, notes: $('eNotes').value };
+    if (editingId) payload.id = editingId;
+    const j = await api(editingId ? 'updateEvent' : 'addEvent', payload);
+    data = j.data;
+    selected = date; month = parse(date).getMonth();
+    resetEventForm();
+    renderAll();
+  } catch (err) {
+    $('evError').textContent = err.message;
+    $('evSaveBtn').textContent = editingId ? 'Save changes' : 'Add event';
+  }
+  $('evSaveBtn').disabled = false;
+};
+
 // ====== INTERACTIONS ======
 function selectDate(ds) {
   selected = ds;
   month = parse(ds).getMonth();
   $('fStart').value = ds;
+  if (!editingId) $('eDate').value = ds;
   renderAll();
 }
 
@@ -319,12 +484,42 @@ $('nextBtn').onclick = function () { if (month < 11) { month++; renderMonth(); }
 document.addEventListener('click', async function (e) {
   const dayBtn = e.target.closest('[data-date]');
   if (dayBtn) { selectDate(dayBtn.getAttribute('data-date')); if (dayBtn.classList.contains('weekend-row')) window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+
   const delBtn = e.target.closest('[data-del]');
   if (delBtn) {
     if (!confirm('Delete this entry?')) return;
     delBtn.disabled = true;
     try { const j = await api('deleteAvailability', { id: delBtn.getAttribute('data-del') }); data = j.data; renderAll(); }
     catch (err) { alert(err.message); delBtn.disabled = false; }
+    return;
+  }
+
+  const rsvpBtn = e.target.closest('[data-rsvp]');
+  if (rsvpBtn) {
+    const parts = rsvpBtn.getAttribute('data-rsvp').split('|');
+    const eventId = parts[0], status = parts[1];
+    const mine = data.rsvps.find(r => r.eventId === eventId && r.userId === me.id);
+    const newStatus = mine && mine.status === status ? '' : status; // tap again to clear
+    document.querySelectorAll('[data-rsvp]').forEach(b => b.disabled = true);
+    try { const j = await api('setRsvp', { eventId: eventId, status: newStatus }); data = j.data; }
+    catch (err) { alert(err.message); }
+    renderAll();
+    return;
+  }
+
+  const editBtn = e.target.closest('[data-editev]');
+  if (editBtn) { startEdit(editBtn.getAttribute('data-editev')); return; }
+
+  const delEv = e.target.closest('[data-delev]');
+  if (delEv) {
+    if (!confirm('Delete this event for everyone?')) return;
+    delEv.disabled = true;
+    try {
+      const id = delEv.getAttribute('data-delev');
+      const j = await api('deleteEvent', { id: id }); data = j.data;
+      if (editingId === id) resetEventForm();
+      renderAll();
+    } catch (err) { alert(err.message); delEv.disabled = false; }
   }
 });
 
